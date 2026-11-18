@@ -327,3 +327,30 @@
 
   &:hover
     color: var(--tinta)
+
+// ---------------------------------------------------------- arte das cartas
+// a área de arte de uma carta de mentira, no papel do tema de agora
+.previaArte
+  display: grid
+  place-items: center
+  aspect-ratio: 16 / 10
+  overflow: hidden
+  background: var(--papel)
+  border-radius: 8px
+
+.previaIcone
+  width: 40%
+  height: auto
+  color: color-mix(in srgb, var(--tinta) 42%, transparent)
+
+.previaRabisco
+  width: 92%
+  height: 92%
+  background: var(--raridade-epica)
+  -webkit-mask: var(--mascara) center / contain no-repeat
+  mask: var(--mascara) center / contain no-repeat
+
+.previaColagem
+  width: 100%
+  height: 100%
+  object-fit: contain

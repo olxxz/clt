@@ -61,6 +61,15 @@ export const ROTULO_TIPO: Record<Versao['itens'][number]['tipo'], string> = {
 
 export const VERSOES: Versao[] = [
   {
+    versao: '0.48',
+    data: '2026-11-18',
+    titulo: 'Cartas com imagem',
+    itens: [
+      { tipo: 'novo', texto: 'As cartas ganharam imagem. Em Configurações › Aparência dá para escolher entre colagem, rabisco ou o ícone de antes.' },
+      { tipo: 'melhor', texto: 'No rabisco, a cor da caneta é a da raridade da carta, de cinza na comum a amarelo na lendária.' },
+    ],
+  },
+  {
     versao: '0.47',
     data: '2026-10-22',
     titulo: 'Estresse sem carimbo',

@@ -167,6 +167,34 @@ $levantada: 18px
     width: 46%
     height: auto
 
+// com imagem (v0.48), a arte mora no papel da própria carta: o fundo mais
+// escuro e o fio embaixo faziam um papel dentro do papel
+.comImagem
+  background: transparent
+  border-bottom-color: transparent
+
+// o rabisco é uma máscara pintada com a cor da carta: a da raridade, a do
+// tom no evento, e o cinza do selo comum na carta comum
+.rabisco
+  position: absolute
+  inset: 6% 6% 2%
+  background: var(--cor-raridade, var(--cor-tom, var(--selo-comum)))
+  -webkit-mask: var(--mascara) center / contain no-repeat
+  mask: var(--mascara) center / contain no-repeat
+
+// absoluta, como o rabisco: item da grade da `.arte`, a altura em % não
+// tinha em que se apoiar, e a imagem crescia por cima do nome da carta
+.colagem
+  position: absolute
+  inset: 0
+  display: block
+  width: 100%
+  height: 100%
+  padding: 4% 4% 0
+  object-fit: contain
+  pointer-events: none
+  user-select: none
+
 // custo preso ao canto superior esquerdo da carta; tipo, ao canto direito —
 // nenhum dos dois flutua sobre a arte, e o texto ganha o espaço que sobra
 // um carimbo por custo, lado a lado na mesma aba: ícone e número, na cor do

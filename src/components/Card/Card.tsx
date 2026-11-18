@@ -11,6 +11,8 @@ import { caminhosDaCarta, comentarioDaCarta, descreverCarta, linhasDaCarta } fro
 import { LockIcon, RESOURCE_ICONS, TONE_ICONS, iconeDaClasse } from '../icons'
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import { apontarParaTremer } from '@/data/vibrar'
+import { useEstiloDaArte } from '@/data/estiloDaArte'
+import { arteDaCarta } from '@/data/artes'
 import styles from './Card.module.sass'
 
 /** Distância em px que separa um clique de um arraste. */
@@ -119,6 +121,10 @@ export default function Card({
 
   const evento = isEvent(card)
   const Icon = evento ? TONE_ICONS[card.tone] : iconeDaClasse(card.kind)
+  // a imagem da carta no estilo escolhido em Configurações (v0.48); sem
+  // imagem para esta carta, ou no estilo "ícone", fica o ícone da classe
+  const estiloDaArte = useEstiloDaArte()
+  const imagem = estiloDaArte === 'icone' ? null : arteDaCarta(card.id, estiloDaArte)
   const custo = evento ? null : (cost ?? card.cost)
   const base = evento ? [] : custosDe(card)
   const extras = evento ? [] : (custos ?? base)
@@ -400,8 +406,16 @@ export default function Card({
             </span>
           ) : null}
           {copies && copies > 1 ? <span className={styles.copias}>×{copies}</span> : null}
-          <div className={styles.arte}>
-            <Icon size={40} aria-hidden />
+          <div className={`${styles.arte} ${imagem ? styles.comImagem : ''}`}>
+            {imagem && estiloDaArte === 'rabisco' ? (
+              // o rabisco é só a FORMA (uma máscara): a cor é a da raridade,
+              // ou a do tom no evento, e acompanha o tema
+              <span className={styles.rabisco} style={{ '--mascara': `url("${imagem}")` } as CSSProperties} aria-hidden />
+            ) : imagem ? (
+              <img className={styles.colagem} src={imagem} alt="" draggable={false} decoding="async" />
+            ) : (
+              <Icon size={40} aria-hidden />
+            )}
             {/* o efeito que a carta deixou, contando os dias: "2/6" no dia
                 seguinte ao que ela saiu; some quando o efeito acaba (v0.46) */}
             {efeitoAtivo ? (

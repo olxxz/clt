@@ -1,6 +1,6 @@
 'use client'
 
-import { KeyRound, LogOut, Monitor, Moon, Music, Sparkles, Sun, Vibrate, Volume2, VolumeX } from 'lucide-react'
+import { Coffee, KeyRound, LogOut, Monitor, Moon, Music, Sparkles, Sun, Vibrate, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { contaTemSenha, definirNovaSenha } from '@/data/conta'
 import { contasSalvas, esquecerConta, recomecarSite, trocarDeConta, type ContaSalva } from '@/data/contasSalvas'
@@ -8,6 +8,8 @@ import { tocar } from '@/data/efeitos'
 import type { Volumes } from '@/data/som'
 import { podeVibrar, vibrar } from '@/data/vibrar'
 import { TEMAS, type Tema } from '@/data/tema'
+import { ESTILOS_DA_ARTE, gravarEstiloDaArte, useEstiloDaArte } from '@/data/estiloDaArte'
+import { arteDaCarta } from '@/data/artes'
 import type { Sessao } from '@/game/session'
 import buttons from '@/styles/buttons.module.sass'
 import Avatar from '../Avatar'
@@ -63,6 +65,7 @@ export default function Configuracoes({
   onSair: () => void
   onFechar: () => void
 }) {
+  const estiloDaArte = useEstiloDaArte()
   const [aba, setAba] = useState<Aba>('som')
   const [vibra] = useState(podeVibrar)
 
@@ -121,6 +124,26 @@ export default function Configuracoes({
           <p className={styles.dica}>
             &ldquo;Sistema&rdquo; acompanha o aparelho, inclusive quando ele troca sozinho de noite.
           </p>
+
+          <h3 className={styles.titulo}>Arte das cartas</h3>
+          {/* a prévia é a arte do Café em cada estilo: escolher vendo */}
+          <div className={styles.temas} role="radiogroup" aria-label="Arte das cartas">
+            {ESTILOS_DA_ARTE.map((e) => (
+              <button
+                key={e.valor}
+                type="button"
+                role="radio"
+                aria-checked={estiloDaArte === e.valor}
+                className={`${styles.tema} ${estiloDaArte === e.valor ? styles.temaAtivo : ''}`}
+                onClick={() => gravarEstiloDaArte(e.valor)}
+              >
+                <span className={styles.previaArte} aria-hidden>
+                  <PreviaDaArte estilo={e.valor} />
+                </span>
+                <span className={styles.temaNome}>{e.rotulo}</span>
+              </button>
+            ))}
+          </div>
         </section>
       ) : null}
 
@@ -444,4 +467,15 @@ function TrocarSenha() {
       ) : null}
     </div>
   )
+}
+
+/** O id do Café: a carta que todo mundo conhece, para a prévia da arte. */
+const CAFE = '49efebc8-f8b2-5495-ad28-472e360fc73b'
+
+function PreviaDaArte({ estilo }: { estilo: 'icone' | 'rabisco' | 'colagem' }) {
+  const imagem = estilo === 'icone' ? null : arteDaCarta(CAFE, estilo)
+  if (estilo === 'rabisco' && imagem)
+    return <span className={styles.previaRabisco} style={{ '--mascara': `url("${imagem}")` } as React.CSSProperties} />
+  if (imagem) return <img className={styles.previaColagem} src={imagem} alt="" />
+  return <Coffee className={styles.previaIcone} />
 }
