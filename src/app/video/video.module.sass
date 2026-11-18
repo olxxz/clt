@@ -1,0 +1,401 @@
+// O motion graphics (v0.48). O palco é 1920×1080, escalado para caber; tudo
+// em px do palco. As cores vêm dos tokens, mas o vídeo força o tema claro.
+
+.janela
+  position: fixed
+  inset: 0
+  overflow: hidden
+  background: #1a1915
+
+.palco
+  position: absolute
+  left: 50%
+  top: 50%
+  width: 1920px
+  height: 1080px
+  overflow: hidden
+  background: radial-gradient(ellipse at 50% 42%, var(--papel-alto) 0%, var(--papel) 62%, var(--papel-baixo) 100%)
+  color: var(--tinta)
+  transform-origin: 50% 50%
+  // a carta do vídeo: o tamanho da mesa, AMPLIADO por `zoom` (`.zoom`): as
+  // fontes da carta têm teto em px, e só o zoom cresce o texto junto
+  --carta-h: 190px
+  --carta-w: 125px
+
+.zoom
+  zoom: 1.75
+
+.cena
+  position: absolute
+  inset: 0
+
+.centro
+  position: absolute
+  inset: 0
+  display: flex
+  flex-direction: column
+  align-items: center
+  justify-content: center
+  gap: 34px
+  text-align: center
+
+.titulo
+  margin: 0
+  font-size: 76px
+  font-weight: 800
+  letter-spacing: -.015em
+  line-height: 1.05
+
+.legenda
+  margin: 0
+  color: var(--tinta-fraca)
+  font: 700 40px var(--mono)
+  letter-spacing: .04em
+
+.sub
+  margin: 0
+  color: var(--tinta-fraca)
+  font: 600 30px var(--mono)
+  letter-spacing: .12em
+  text-transform: uppercase
+
+.cursor
+  margin-left: 4px
+  color: var(--estresse)
+
+// ------------------------------------------------------------ abertura
+.logo
+  display: flex
+  gap: 60px
+  color: var(--tinta-fraca)
+
+.clt
+  margin: 0
+  padding: 0 .22em
+  border: 22px solid var(--estresse)
+  border-radius: 30px
+  color: var(--estresse)
+  font: 900 300px/1.05 var(--mono)
+  letter-spacing: .06em
+
+// ------------------------------------------------------------ o mês
+.mes
+  display: grid
+  grid-template-columns: repeat(5, 120px)
+  gap: 16px
+
+.dia
+  display: grid
+  place-items: center
+  height: 92px
+  border: 3px dashed var(--linha)
+  border-radius: 12px
+  color: var(--tinta-fraca)
+  font: 800 34px var(--mono)
+  font-style: normal
+
+.diaAceso
+  border: 3px solid var(--tinta)
+  background: var(--tinta)
+  color: var(--papel-alto)
+
+.diaSexta
+  border-color: var(--dinheiro)
+  background: var(--dinheiro)
+
+// ------------------------------------------------------------ a equação
+.equacao
+  margin: 0
+  font: 900 130px/1 var(--mono)
+  letter-spacing: -.03em
+
+.pips
+  display: flex
+  gap: 18px
+
+.pipE
+  color: var(--energia)
+  fill: color-mix(in srgb, var(--energia) 28%, transparent)
+
+.pipS
+  color: var(--estresse)
+  fill: color-mix(in srgb, var(--estresse) 28%, transparent)
+
+.placar
+  display: flex
+  gap: 90px
+  font: 700 40px var(--mono)
+
+  b
+    margin-left: 14px
+    font-size: 64px
+
+// ------------------------------------------------------------ a mão
+.mesa
+  position: absolute
+  inset: 0
+  display: flex
+  justify-content: center
+
+.baralho
+  position: absolute
+  left: 1640px
+  top: 170px
+  width: 198px
+  height: 300px
+  border-radius: 8px
+  background: var(--papel-baixo)
+  box-shadow: 4px 4px 0 var(--linha), 8px 8px 0 var(--linha), 12px 12px 0 var(--linha)
+
+.cartaSolta
+  position: absolute
+  left: 0
+  top: 0
+
+.ganhos
+  position: absolute
+  left: 1180px
+  top: 380px
+  display: grid
+  gap: 18px
+  font: 900 70px var(--mono)
+
+  span
+    display: flex
+    align-items: center
+    gap: 12px
+
+// ------------------------------------------------------------ embalo
+.fileira
+  display: flex
+  gap: 40px
+
+.comBonus
+  position: relative
+
+.bonus
+  position: absolute
+  top: -40px
+  right: -46px
+  z-index: 5
+  display: inline-flex
+  align-items: center
+  gap: 6px
+  padding: 8px 18px
+  background: var(--produtividade)
+  color: #fff
+  border-radius: 999px
+  font: 900 46px var(--mono)
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .2)
+
+// ------------------------------------------------------------ sexta
+.recibo
+  position: relative
+  display: grid
+  gap: 16px
+  width: 620px
+  padding: 40px 50px 50px
+  background: #fbfaf5
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .35)
+  font: 700 38px var(--mono)
+  // a serrilha de papel térmico embaixo
+  mask: linear-gradient(#000, #000) top / 100% calc(100% - 14px) no-repeat, conic-gradient(from -45deg at 50% 0, #000 90deg, transparent 0) bottom / 28px 14px repeat-x
+
+.reciboTopo
+  padding-bottom: 14px
+  border-bottom: 3px dashed var(--linha)
+  color: var(--tinta-fraca)
+  font-size: 30px
+  letter-spacing: .12em
+
+.reciboLinha, .reciboTotal
+  display: flex
+  justify-content: space-between
+
+.reciboTotal
+  padding-top: 14px
+  border-top: 3px dashed var(--linha)
+  font-size: 50px
+
+.pago
+  position: absolute
+  right: -150px
+  bottom: -40px
+  padding: 4px 24px
+  border: 10px solid var(--produtividade)
+  border-radius: 14px
+  color: var(--produtividade)
+  font: 900 110px var(--mono)
+  letter-spacing: .08em
+  opacity: .9
+
+// ------------------------------------------------------------ derrotas
+.derrotas
+  display: flex
+  gap: 50px
+
+.carimbo
+  padding: 8px 26px
+  border: 11px solid var(--estresse)
+  border-radius: 16px
+  color: var(--estresse)
+  font: 900 76px var(--mono)
+  letter-spacing: .08em
+
+// ------------------------------------------------------------ antes e depois
+.antesDepois
+  position: relative
+
+.depois
+  position: absolute
+  inset: 0
+  background: transparent
+
+.linhaVarre
+  position: absolute
+  top: -30px
+  bottom: -30px
+  width: 6px
+  margin-left: -3px
+  background: var(--destaque)
+  border-radius: 3px
+  box-shadow: 0 0 30px var(--destaque)
+
+// ------------------------------------------------------------ técnica
+.fluxo
+  display: grid
+  grid-template-columns: auto 140px auto
+  grid-template-rows: auto auto
+  align-items: center
+  gap: 24px 30px
+
+  i
+    grid-row: 1 / span 2
+    grid-column: 2
+    height: 6px
+    background: var(--tinta)
+    transform-origin: left
+
+.caixa
+  display: grid
+  gap: 6px
+  padding: 26px 40px
+  background: var(--papel-alto)
+  border: 4px solid var(--tinta)
+  border-radius: 18px
+  color: var(--tinta-fraca)
+  font: 600 30px var(--mono)
+
+  b
+    color: var(--tinta)
+    font-size: 46px
+
+  &:first-child
+    grid-row: 1 / span 2
+
+.chips
+  display: flex
+  gap: 16px
+
+  span
+    padding: 10px 26px
+    background: var(--tinta)
+    color: var(--papel-alto)
+    border-radius: 999px
+    font: 700 32px var(--mono)
+
+// ------------------------------------------------------------ progressão
+.passos
+  display: flex
+  align-items: center
+  gap: 40px
+
+.passo
+  display: grid
+  justify-items: center
+  gap: 14px
+  width: 300px
+  padding: 30px 20px
+  background: var(--papel-alto)
+  border: 4px solid var(--tinta)
+  border-radius: 20px
+  font: 800 36px var(--mono)
+
+  svg
+    color: var(--destaque)
+
+  & + &
+    position: relative
+
+    &::before
+      content: "→"
+      position: absolute
+      left: -38px
+      top: 50%
+      transform: translateY(-50%)
+      color: var(--tinta-fraca)
+      font-size: 40px
+
+// ------------------------------------------------------------ fim
+.relogio
+  padding: 10px 30px
+  background: var(--tinta)
+  color: var(--papel-alto)
+  border-radius: 14px
+  font: 800 64px var(--mono)
+  letter-spacing: .08em
+
+.fim
+  margin: 0
+  padding: 0 .3em
+  border: 16px solid var(--produtividade)
+  border-radius: 24px
+  color: var(--produtividade)
+  font: 900 170px/1.1 var(--mono)
+
+.url
+  margin: 0
+  padding: 14px 40px
+  background: var(--tinta)
+  color: var(--papel-alto)
+  border-radius: 16px
+  font: 800 64px var(--mono)
+
+// ------------------------------------------------------------ controles
+.controles
+  position: fixed
+  left: 50%
+  bottom: max(14px, env(safe-area-inset-bottom, 0px))
+  z-index: 10
+  display: flex
+  align-items: center
+  gap: 10px
+  padding: 8px 14px
+  background: rgba(20, 19, 16, .82)
+  color: #ece7da
+  border-radius: 999px
+  font: 600 13px var(--mono)
+  transform: translateX(-50%)
+  opacity: .25
+  transition: opacity .2s ease
+
+  &:hover, &:focus-within
+    opacity: 1
+
+  button, a
+    display: inline-grid
+    place-items: center
+    min-width: 30px
+    height: 30px
+    padding: 0 8px
+    background: none
+    border: 1px solid rgba(236, 231, 218, .3)
+    border-radius: 999px
+    color: inherit
+    font: inherit
+    text-decoration: none
+    cursor: pointer
+
+  input
+    width: min(40vw, 380px)
+    accent-color: #e0b544

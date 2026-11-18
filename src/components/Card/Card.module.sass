@@ -179,6 +179,23 @@ $levantada: 18px
   .seloExtra
     right: 4px
 
+// o EVENTO com rabisco (v0.48, pedido do autor): a carta inteira na cor do
+// tom, e o desenho, o nome e o ícone do canto por cima em `--sobre-cor`. A
+// caixa do texto continua de papel, para ler. A carta de ação não muda:
+// papel neutro e o rabisco na cor da raridade
+.eventoPintado
+  background: var(--cor-tom)
+
+  .nome,
+  .selo
+    color: var(--sobre-cor)
+
+  .rabisco
+    background: var(--sobre-cor)
+
+  .selo::before
+    display: none
+
 // com imagem (v0.48), a arte mora no papel da própria carta: o fundo mais
 // escuro e o fio embaixo faziam um papel dentro do papel
 .comImagem
@@ -310,6 +327,22 @@ $levantada: 18px
   height: 27px
   padding: 4px 4px 0 0
   color: var(--cor-raridade, var(--cor-tom, var(--selo-comum)))
+
+// com imagem, o rabisco passa por baixo dos selos: um halo na cor do papel
+// da carta, que some em degradê, separa o ícone do traço sem voltar a ser
+// uma aba (v0.48)
+.selo::before,
+.seloExtra::before
+  content: ""
+  position: absolute
+  inset: -6px -6px -10px -10px
+  z-index: -1
+  background: radial-gradient(closest-side, var(--papel-alto) 62%, transparent)
+  pointer-events: none
+
+.soIcone .selo::before,
+.soIcone .seloExtra::before
+  display: none
 
 // o segundo selo, à esquerda do da classe: o dado da carta de sorte. Sem
 // fundo, como o do naipe (v0.48)
