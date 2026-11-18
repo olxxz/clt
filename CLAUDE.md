@@ -413,9 +413,9 @@ propósito: é do aparelho, e `limparLocalDoJogo` apaga o `clt:`.
   IA (chegou a ser opção, saiu) e cenas com os AVATARES do editor num palco
   5:4 maior que a área de arte, preso embaixo, para o chapéu não achatar
   (funcionou; se voltar, é esse o caminho).
-- **Faltam 14 eventos** (os 48 de ação estão prontos): rodar
-  `python3 scripts/arte/gerar.py rabisco` e depois o `indice.mjs`
-  completa (o que existe é pulado).
+- **As 74 têm rabisco** (48 de ação e 26 eventos). Carta nova: a linha
+  dela em `catalogo.json` e `cenas.py`, `python3 scripts/arte/gerar.py
+  rabisco` (o que existe é pulado) e o `indice.mjs`.
 
 ### O versionamento do baralho
 
