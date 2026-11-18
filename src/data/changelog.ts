@@ -67,6 +67,7 @@ export const VERSOES: Versao[] = [
     itens: [
       { tipo: 'novo', texto: 'As cartas podem ganhar um desenho de caneta: ligue o "Rabisco" em Configurações › Aparência.' },
       { tipo: 'melhor', texto: 'O ícone da carta tem a cor da raridade, de cinza na comum a amarelo na lendária.' },
+      { tipo: 'melhor', texto: 'A Comunidade ganhou cara nova: as abas no topo, um atalho para elas no menu e gráficos na Análise.' },
     ],
   },
   {

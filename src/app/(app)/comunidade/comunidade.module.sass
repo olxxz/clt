@@ -1,13 +1,72 @@
-.topo
-  display: flex
-  flex-wrap: wrap
-  align-items: center
-  justify-content: space-between
-  gap: 12px
-  margin-bottom: 22px
+// O cabeçalho da comunidade (v0.48): título e uma linha sobre a aba, e as
+// abas embaixo, como as de uma pasta, presas no fio que separa o conteúdo.
+
+.cabecalho
+  display: grid
+  gap: 16px
+  margin: 0 0 24px
+  padding-top: 4px
+  border-bottom: 1px solid var(--linha)
+
+.titulos
+  display: grid
+  gap: 4px
 
 .titulo
+  margin: 0
   font-size: clamp(26px, 5vw, 36px)
 
+.texto
+  margin: 0
+  color: var(--tinta-fraca)
+  font-size: 14px
+
 .abas
-  flex: none
+  display: flex
+  gap: 4px
+  // a aba encosta no fio de baixo: o sublinhado da ativa cobre o fio
+  margin-bottom: -1px
+  overflow-x: auto
+  scrollbar-width: none
+
+.aba
+  display: inline-flex
+  align-items: center
+  gap: 8px
+  padding: 10px 16px 12px
+  border-bottom: 3px solid transparent
+  border-radius: var(--raio) var(--raio) 0 0
+  color: var(--tinta-fraca)
+  font-size: 15px
+  font-weight: 600
+  text-decoration: none
+  white-space: nowrap
+  transition: color .12s ease, background .12s ease, border-color .12s ease
+
+  &:hover
+    background: var(--papel-alto)
+    color: var(--tinta)
+
+  &:focus-visible
+    outline: 2px solid var(--destaque)
+    outline-offset: -2px
+
+.abaAtiva
+  border-bottom-color: var(--destaque)
+  color: var(--tinta)
+
+  svg
+    color: var(--destaque)
+
+.conteudo
+  min-width: 0
+
+// no celular as três abas dividem a largura: com a rolagem lateral, a
+// última ficava cortada na borda e parecia que eram só duas
+@media (max-width: 560px)
+  .aba
+    flex: 1
+    justify-content: center
+    gap: 6px
+    padding: 10px 6px 12px
+    font-size: 14px

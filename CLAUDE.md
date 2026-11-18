@@ -30,8 +30,16 @@ branch padrão (`.github/workflows/pages.yml`).
 um botão Jogar/Continuar, missões), `/jogar` (a mesa, tela cheia sem rolagem),
 `/baralho`, `/ranking`, `/perfil` e `/jogador?nick=` (o MESMO componente
 `components/Perfil`), `/perfil/editar` (avatar), `/meus-jogos[?nick=]`,
-`/meus-jogos/detalhe?id=` (replay), `/comunidade`, `/maquina` (máquina de
-vendas com tokens), `/termos`, `/nova-senha`, `/lab/*` (oficina, só admin).
+`/meus-jogos/detalhe?id=` (replay), `/comunidade[?aba=feedbacks|analise]`
+(as abas são o cabeçalho; passar o mouse em "Comunidade" na barra abre um
+menu com elas, que mora FORA do painel porque o painel corta o que vaza),
+`/maquina` (máquina de vendas com tokens), `/termos`, `/nova-senha`,
+`/lab/*` (oficina, só admin), `/apresentacao` e `/video` (a apresentação
+do trabalho e o motion graphics, fora do jogo e sem login, linkados do lab).
+
+A **Análise** (`comunidade/Analise.tsx`) desenha os gráficos em SVG à mão,
+medidos pela largura do cartão; as cores dos desfechos foram validadas para
+daltonismo nos dois temas, e vermelho e verde nunca ficam lado a lado.
 
 ---
 

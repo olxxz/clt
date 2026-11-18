@@ -1,20 +1,36 @@
-.top
-  display: flex
-  flex-wrap: wrap
-  align-items: baseline
-  justify-content: space-between
-  gap: 12px
-  margin-bottom: 4px
+// A análise (v0.48): uma fileira de números, e os gráficos em cartões de
+// papel, dois por linha. As cores dos desfechos foram conferidas com o
+// validador de paleta (daltonismo, contraste) nos dois temas; no escuro elas
+// são um passo mais escuras que as do HUD, que lá são claras demais para
+// preencher uma barra.
 
-.title
-  font-size: 26px
+=coresDosDesfechosEscuras
+  --c-vitoria: #3f9462
+  --c-demissao: #b8892a
+  --c-despejo: #4b80b8
+  --c-burnout: #c95549
 
-.hint
-  margin: 0 0 24px
+.analise
+  --c-vitoria: #2f7a4d
+  --c-demissao: #c8971f
+  --c-despejo: #2f6f9f
+  --c-burnout: #b03028
+  display: grid
+  gap: 18px
+
+@media (prefers-color-scheme: dark)
+  :global(html:not([data-tema='claro'])) .analise
+    +coresDosDesfechosEscuras
+
+:global(html[data-tema='escuro']) .analise
+  +coresDosDesfechosEscuras
+
+.nota
+  margin: 0
   color: var(--tinta-fraca)
   font-size: 13px
 
-.empty
+.vazio
   margin: 0
   color: var(--tinta-fraca)
   font-size: 13px
@@ -32,142 +48,428 @@
   color: var(--tinta-fraca)
   font-size: 13px
 
-// ------------------------------------------------------------- ladrilhos
-.grade
-  display: grid
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr))
-  gap: 10px
-  margin-bottom: 28px
-
-.ladrilho
-  display: flex
-  flex-direction: column
-  gap: 4px
-  padding: 14px 16px
-  background: var(--papel-alto)
-  border: 1px solid var(--linha)
-  border-radius: var(--raio)
-
 .rotulo
   color: var(--tinta-fraca)
   font-size: 11px
   font-weight: 600
-  letter-spacing: .05em
+  letter-spacing: .06em
   text-transform: uppercase
-
-.valor
-  font-family: var(--mono)
-  font-size: 28px
-  font-weight: 700
-  font-variant-numeric: tabular-nums
 
 .sub
   color: var(--tinta-fraca)
   font-size: 12px
+  line-height: 1.35
 
-// ------------------------------------------------- cabeçalho e alternância
-// fica igual nas duas abas: é o resumo que vale de relance
-.destaques
-  display: flex
-  flex-wrap: wrap
-  gap: 20px 28px
-  margin-bottom: 20px
-  padding: 14px 16px
+.fraco
+  color: var(--tinta-fraca)
+
+// ------------------------------------------------------------ resumo
+.resumo
+  display: grid
+  grid-template-columns: repeat(4, minmax(0, 1fr))
+  gap: 10px
+
+.numero
+  display: grid
+  align-content: start
+  gap: 4px
+  padding: 16px 18px
   background: var(--papel-alto)
   border: 1px solid var(--linha)
-  border-radius: var(--raio)
+  border-radius: 10px
 
-.destaque
-  display: flex
-  flex-direction: column
-  gap: 2px
-  min-width: 0
+.numeroDestaque
+  border-top: 3px solid var(--c-vitoria)
 
-.destaqueValor
-  font-size: 18px
+.valor
+  font-family: var(--mono)
+  font-size: clamp(26px, 3.4vw, 36px)
   font-weight: 700
   font-variant-numeric: tabular-nums
+  line-height: 1.1
 
-.abas
-  display: flex
-  gap: 6px
-  margin-bottom: 24px
+// ------------------------------------------------------------ cartões
+.grade
+  display: grid
+  grid-template-columns: repeat(2, minmax(0, 1fr))
+  gap: 14px
 
-.aba
-  padding: 7px 16px
-  background: transparent
+.cartao
+  display: grid
+  align-content: start
+  gap: 14px
+  min-width: 0
+  padding: 18px 20px 20px
+  background: var(--papel-alto)
   border: 1px solid var(--linha)
-  border-radius: 999px
+  border-radius: 10px
+
+  header
+    display: grid
+    gap: 2px
+
+  h2
+    margin: 0
+    font-size: 17px
+
+  header p
+    margin: 0
+    color: var(--tinta-fraca)
+    font-size: 13px
+    line-height: 1.4
+
+// ------------------------------------------------------------ desfechos
+.corVitoria
+  background: var(--c-vitoria)
+.corDemissao
+  background: var(--c-demissao)
+.corDespejo
+  background: var(--c-despejo)
+.corBurnout
+  background: var(--c-burnout)
+
+// a barra de um todo em partes: 2px de papel entre as fatias, pontas redondas
+.barraDividida
+  display: flex
+  gap: 2px
+  height: 24px
+  min-width: 0
+
+.fatia
+  display: grid
+  place-items: center
+  flex: 0 1 0
+  min-width: 4px
+  // o rótulo dentro da fatia: branco, como a regra pede para texto sobre
+  // cor cheia; o React só o escreve quando a fatia é larga o bastante
+  color: #fff
+  font: 700 12px var(--mono)
+  cursor: default
+
+  &:first-child
+    border-radius: 4px 0 0 4px
+
+  &:last-child
+    border-radius: 0 4px 4px 0
+
+  &:only-child
+    border-radius: 4px
+
+.rodapeCartao
+  margin: auto 0 0
+  padding-top: 10px
+  border-top: 1px dashed var(--linha)
   color: var(--tinta-fraca)
-  font: inherit
+  font-size: 12px
+
+.legenda
+  display: grid
+  grid-template-columns: repeat(2, minmax(0, 1fr))
+  gap: 8px 16px
+  margin: 0
+  padding: 0
+  list-style: none
+  font-size: 14px
+
+  li
+    display: flex
+    align-items: center
+    gap: 8px
+
+  i
+    flex: none
+    width: 10px
+    height: 10px
+    border-radius: 3px
+
+  b
+    margin-left: auto
+    font-family: var(--mono)
+    font-variant-numeric: tabular-nums
+
+  .fraco
+    width: 38px
+    text-align: right
+    font-family: var(--mono)
+    font-size: 12px
+
+// ------------------------------------------------------------ curva
+.grafico
+  width: 100%
+  min-width: 0
+
+  svg
+    display: block
+    overflow: visible
+
+.grade1px
+  stroke: var(--linha)
+  stroke-width: 1
+
+.limite
+  stroke: var(--c-burnout)
+  stroke-width: 1
+
+.rotuloLimite
+  fill: var(--tinta-fraca)
+  font: 600 11px var(--mono)
+
+.eixo
+  fill: var(--tinta-fraca)
+  font: 11px var(--mono)
+
+.areaEstresse
+  fill: var(--c-burnout)
+  opacity: .1
+
+.linhaEstresse
+  fill: none
+  stroke: var(--c-burnout)
+  stroke-width: 2
+  stroke-linejoin: round
+  stroke-linecap: round
+
+.pontoEstresse
+  fill: var(--c-burnout)
+  stroke: var(--papel-alto)
+  stroke-width: 2
+
+.mira
+  stroke: var(--tinta-fraca)
+  stroke-width: 1
+
+.tabela
   font-size: 13px
-  cursor: pointer
 
-  &:hover
-    border-color: var(--tinta-fraca)
+  summary
+    width: fit-content
+    color: var(--tinta-fraca)
+    font-size: 12px
+    cursor: pointer
 
-.abaAtiva
+  table
+    width: 100%
+    margin-top: 8px
+    border-collapse: collapse
+    font-variant-numeric: tabular-nums
+
+  th, td
+    padding: 4px 6px
+    border-bottom: 1px solid var(--linha)
+    text-align: right
+
+  th:first-child, td:first-child
+    text-align: left
+
+// ------------------------------------------------------------ barras
+.barras
+  display: grid
+  gap: 8px
+  margin: 0
+  padding: 0
+  list-style: none
+
+  li
+    display: grid
+    grid-template-columns: minmax(0, 150px) minmax(0, 1fr) 48px
+    align-items: center
+    gap: 10px
+    font-size: 14px
+
+  b
+    text-align: right
+    font-family: var(--mono)
+    font-variant-numeric: tabular-nums
+
+.nomeBarra
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.trilho
+  height: 14px
+
+.barra
+  display: block
+  height: 100%
+  min-width: 4px
+  background: var(--produtividade)
+  border-radius: 0 4px 4px 0
+
+// ------------------------------------------------------------ escolhas
+.escolhas
+  display: grid
+  gap: 14px
+  margin: 0
+  padding: 0
+  list-style: none
+
+  li
+    display: grid
+    gap: 6px
+
+  .barraDividida
+    height: 16px
+
+.nomeEvento
+  font-size: 14px
+  font-weight: 600
+
+.opcaoA
   background: var(--tinta)
-  border-color: var(--tinta)
-  color: var(--papel)
+.opcaoB
+  background: color-mix(in srgb, var(--tinta) 32%, var(--papel-alto))
 
-// --------------------------------------------------------------- derrotas
-.section
-  margin-bottom: 32px
+.opcoes
+  display: flex
+  justify-content: space-between
+  gap: 10px
+  color: var(--tinta-fraca)
+  font-size: 12px
 
-// lista simples de "nome · contagem", para o que não vira barra
+  > span
+    display: inline-flex
+    align-items: center
+    gap: 6px
+
+  i
+    width: 9px
+    height: 9px
+    border-radius: 2px
+
+  b
+    color: var(--tinta)
+    font-family: var(--mono)
+
+// ------------------------------------------------------------ listas
 .lista
+  display: grid
+  gap: 2px
   margin: 0
   padding: 0
   list-style: none
 
   li
     display: flex
-    align-items: baseline
+    align-items: center
     gap: 10px
     padding: 7px 0
     border-bottom: 1px solid var(--linha)
-    font-size: 13px
+    font-size: 14px
 
-.chave
-  flex: 1
+    &:last-child
+      border-bottom: 0
+
+  b
+    margin-left: auto
+    font-family: var(--mono)
+    font-variant-numeric: tabular-nums
+
+.posicao
+  display: grid
+  place-items: center
+  flex: none
+  width: 22px
+  height: 22px
+  border-radius: 50%
+  background: var(--papel)
+  color: var(--tinta-fraca)
+  font: 700 11px var(--mono)
+
+.nomeLista
   min-width: 0
   overflow: hidden
   text-overflow: ellipsis
   white-space: nowrap
 
-.head
-  display: flex
-  align-items: baseline
-  gap: 10px
-  margin-bottom: 12px
-  padding-bottom: 6px
-  border-bottom: 1px solid var(--linha)
-
-.barras
-  display: flex
-  flex-direction: column
-  gap: 10px
-
-.barraLinha
-  display: grid
-  grid-template-columns: 110px 1fr 60px
-  align-items: center
-  gap: 10px
-  font-size: 13px
-
-.barraFundo
-  height: 10px
-  background: var(--papel-baixo)
+.etiqueta
+  flex: none
+  padding: 1px 8px
+  border: 1px solid var(--linha)
   border-radius: 999px
-  overflow: hidden
-
-.barraPreenchida
-  height: 100%
-  border-radius: 999px
-
-.numBarra
-  text-align: right
   color: var(--tinta-fraca)
+  font-size: 11px
+
+// ------------------------------------------------------------ nerds
+.nerds
+  background: var(--papel-alto)
+  border: 1px solid var(--linha)
+  border-radius: 10px
+
+  summary
+    display: flex
+    flex-wrap: wrap
+    align-items: center
+    gap: 4px 10px
+    padding: 14px 18px
+    font-size: 16px
+    font-weight: 650
+    list-style: none
+    cursor: pointer
+
+    &::-webkit-details-marker
+      display: none
+
+    svg
+      transition: transform .15s ease
+
+    span
+      color: var(--tinta-fraca)
+      font-size: 13px
+      font-weight: 400
+
+  &[open] summary svg
+    transform: rotate(180deg)
+
+.ladrilhos
+  display: grid
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr))
+  gap: 10px
+  padding: 0 18px 18px
+
+.ladrilho
+  display: grid
+  align-content: start
+  gap: 3px
+  padding: 12px 14px
+  background: var(--papel)
+  border-radius: 8px
+
+.valorPequeno
   font-family: var(--mono)
+  font-size: 22px
+  font-weight: 700
   font-variant-numeric: tabular-nums
+
+// ------------------------------------------------------------ dica
+.dica
+  position: fixed
+  z-index: 60
+  display: grid
+  gap: 2px
+  max-width: 220px
+  padding: 8px 12px
+  background: var(--tinta)
+  color: var(--papel-alto)
+  border-radius: 8px
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .2)
+  font-size: 12px
+  pointer-events: none
+
+  b
+    font-size: 13px
+
+  strong
+    font-family: var(--mono)
+
+// ------------------------------------------------------------ celular
+@media (max-width: 760px)
+  .resumo
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+  .grade
+    grid-template-columns: 1fr
+  .barras li
+    grid-template-columns: minmax(0, 110px) minmax(0, 1fr) 40px
+  .nerds summary span
+    flex-basis: 100%
+    padding-left: 28px

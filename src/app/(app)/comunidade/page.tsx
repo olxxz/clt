@@ -1,43 +1,63 @@
 'use client'
 
-import { useState } from 'react'
-import Segmentado from '@/components/Segmentado'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
+import { ABAS_DA_COMUNIDADE, abaValida } from './abas'
 import Analise from './Analise'
 import Feedbacks from './Feedbacks'
 import Novidades from './Novidades'
 import styles from './comunidade.module.sass'
 
-type Aba = 'novidades' | 'feedbacks' | 'analise'
-
 /**
  * Novidades, Feedbacks e Análise eram três entradas no menu para o mesmo
- * assunto: o que está acontecendo com o jogo. Quem abre uma quase sempre quer
- * olhar a outra — o relato vira novidade, a novidade se explica pelo número.
- * Juntando em abas, o menu encurta e o caminho entre elas some.
+ * assunto: o que está acontecendo com o jogo. Viraram abas (v0.38), e desde a
+ * v0.48 as abas são o CABEÇALHO da página, com a aba no endereço
+ * (`?aba=feedbacks`): é o que deixa o menu da barra lateral abrir direto
+ * numa delas, e o link de uma aba ser compartilhável.
  */
 export default function ComunidadePage() {
-  const [aba, setAba] = useState<Aba>('novidades')
+  // `useSearchParams` no export estático só vive dentro de um Suspense
+  return (
+    <Suspense fallback={null}>
+      <Comunidade />
+    </Suspense>
+  )
+}
+
+function Comunidade() {
+  const aba = abaValida(useSearchParams().get('aba'))
+  const atual = ABAS_DA_COMUNIDADE.find((a) => a.valor === aba)!
 
   return (
     <main className="page">
-      <header className={styles.topo}>
-        <h1 className={styles.titulo}>Comunidade</h1>
-        <Segmentado
-          className={styles.abas}
-          rotulo="O que ver"
-          valor={aba}
-          onChange={setAba}
-          opcoes={[
-            { valor: 'novidades', rotulo: 'Novidades' },
-            { valor: 'feedbacks', rotulo: 'Feedbacks' },
-            { valor: 'analise', rotulo: 'Análise' },
-          ]}
-        />
+      <header className={styles.cabecalho}>
+        <div className={styles.titulos}>
+          <h1 className={styles.titulo}>Comunidade</h1>
+          <p className={styles.texto}>{atual.texto}</p>
+        </div>
+        <nav className={styles.abas} aria-label="Seções da comunidade">
+          {ABAS_DA_COMUNIDADE.map(({ valor, rotulo, Icon }) => (
+            <Link
+              key={valor}
+              href={valor === 'novidades' ? '/comunidade' : `/comunidade?aba=${valor}`}
+              scroll={false}
+              replace
+              className={`${styles.aba} ${aba === valor ? styles.abaAtiva : ''}`}
+              aria-current={aba === valor ? 'page' : undefined}
+            >
+              <Icon size={17} aria-hidden />
+              {rotulo}
+            </Link>
+          ))}
+        </nav>
       </header>
 
-      {aba === 'novidades' ? <Novidades /> : null}
-      {aba === 'feedbacks' ? <Feedbacks /> : null}
-      {aba === 'analise' ? <Analise /> : null}
+      <div className={styles.conteudo}>
+        {aba === 'novidades' ? <Novidades /> : null}
+        {aba === 'feedbacks' ? <Feedbacks /> : null}
+        {aba === 'analise' ? <Analise /> : null}
+      </div>
     </main>
   )
 }

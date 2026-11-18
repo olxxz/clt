@@ -23,6 +23,7 @@ import { MaquinaIcon, TokenIcon } from '../icons'
 import Dialogo, { popupAberto } from '../Dialogo'
 import Segmentado from '../Segmentado'
 import { useSessao } from '../SessaoGuard'
+import { ABAS_DA_COMUNIDADE } from '@/app/(app)/comunidade/abas'
 import { gravarVolumes, lerVolumes, VOLUMES_PADRAO, type Volumes } from '@/data/som'
 import { gravarTema, lerTema, type Tema } from '@/data/tema'
 import { souAdmin } from '@/data/feedback'
@@ -89,6 +90,27 @@ export default function SideNav() {
   const [abaAvisos, setAbaAvisos] = useState<'novos' | 'todos'>('novos')
   const [saindo, setSaindo] = useState(false)
   const painelRef = useRef<HTMLDivElement>(null)
+  /** O menu das abas da comunidade, ao passar o mouse em "Comunidade": a
+   *  altura (do topo da tela) em que ele abre, ou null. */
+  const [submenu, setSubmenu] = useState<number | null>(null)
+  const fechaSubmenu = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function abrirSubmenu(e: React.PointerEvent<HTMLElement>) {
+    // só o mouse: no toque, tocar em "Comunidade" já abre a página
+    if (e.pointerType !== 'mouse') return
+    if (fechaSubmenu.current) clearTimeout(fechaSubmenu.current)
+    setSubmenu(e.currentTarget.getBoundingClientRect().top)
+  }
+
+  function agendarFecharSubmenu() {
+    if (fechaSubmenu.current) clearTimeout(fechaSubmenu.current)
+    // um respiro para o mouse atravessar do link para o menu sem ele sumir
+    fechaSubmenu.current = setTimeout(() => setSubmenu(null), 160)
+  }
+
+  useEffect(() => () => {
+    if (fechaSubmenu.current) clearTimeout(fechaSubmenu.current)
+  }, [])
   const router = useRouter()
   /** Para onde ia o clique que esbarrou numa alteração por salvar. */
   const [destinoPendente, setDestinoPendente] = useState<{ href: string; aviso: string } | null>(null)
@@ -288,6 +310,9 @@ export default function SideNav() {
                       href={href}
                       aria-current={ativo ? 'page' : undefined}
                       onClick={(e) => navegar(e, href)}
+                      {...(href === '/comunidade'
+                        ? { onPointerEnter: abrirSubmenu, onPointerLeave: agendarFecharSubmenu, 'aria-haspopup': 'menu' as const }
+                        : {})}
                     >
                       <span className={styles.comSino}>
                         <Icon size={22} aria-hidden />
@@ -363,6 +388,44 @@ export default function SideNav() {
 
           </div>
         </div>
+
+        {/* o menu da comunidade mora FORA do painel (que corta o que passa da
+            borda) e DENTRO da barra: passar o mouse por ele ainda é passar
+            pela barra, e ela não se recolhe no meio do caminho */}
+        {submenu !== null ? (
+          <div
+            className={styles.submenu}
+            style={{ top: submenu }}
+            role="menu"
+            aria-label="Comunidade"
+            onPointerEnter={() => fechaSubmenu.current && clearTimeout(fechaSubmenu.current)}
+            onPointerLeave={agendarFecharSubmenu}
+          >
+            <div className={styles.submenuCaixa}>
+              {ABAS_DA_COMUNIDADE.map(({ valor, rotulo, texto, Icon }) => {
+                const href = valor === 'novidades' ? '/comunidade' : `/comunidade?aba=${valor}`
+                return (
+                  <Link
+                    key={valor}
+                    role="menuitem"
+                    href={href}
+                    className={styles.submenuItem}
+                    onClick={(e) => {
+                      setSubmenu(null)
+                      navegar(e, href)
+                    }}
+                  >
+                    <Icon size={18} aria-hidden />
+                    <span>
+                      <b>{rotulo}</b>
+                      <span>{texto}</span>
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
       </nav>
 
       {avisos ? (

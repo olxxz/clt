@@ -365,3 +365,64 @@ $painel-largo: 256px
   .backdrop
     transition: none
 
+
+// ------------------------------------------------------------ menu da comunidade
+// Ao passar o mouse em "Comunidade", as abas dela abrem ao lado do painel já
+// aberto. A faixa transparente da esquerda (o `padding`) é a ponte: sem ela,
+// o mouse cruzaria um vão fora da barra, e a barra se recolheria.
+.submenu
+  position: fixed
+  left: $painel-largo
+  z-index: 45
+  padding-left: 10px
+  animation: submenu-entra .14s ease-out
+
+.submenuCaixa
+  display: grid
+  gap: 2px
+  width: 270px
+  padding: 6px
+  background: var(--papel-alto)
+  border: 1px solid var(--linha)
+  border-radius: 10px
+  box-shadow: 8px 10px 28px rgba(30, 28, 24, .16)
+
+.submenuItem
+  display: flex
+  align-items: flex-start
+  gap: 12px
+  padding: 10px 12px
+  border-radius: 7px
+  color: var(--tinta)
+  text-decoration: none
+
+  svg
+    flex: none
+    margin-top: 2px
+    color: var(--destaque)
+
+  > span
+    display: grid
+    gap: 2px
+
+  b
+    font-size: 15px
+
+  span span
+    color: var(--tinta-fraca)
+    font-size: 12px
+    line-height: 1.35
+
+  &:hover, &:focus-visible
+    background: var(--papel)
+    outline: none
+
+@keyframes submenu-entra
+  from
+    opacity: 0
+    transform: translateX(-6px)
+
+// no toque não há "passar o mouse": o menu nem aparece
+@media (hover: none)
+  .submenu
+    display: none

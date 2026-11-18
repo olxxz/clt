@@ -33,7 +33,7 @@ export default function Novidades() {
   return (
     <>
       <p className={styles.intro}>
-        O que mudou no jogo, versão por versão. Onde a cara mudou, tem a foto de antes e
+        Onde a cara mudou, tem a foto de antes e
         a de agora. Sentiu falta de alguma coisa? A aba de <b>Feedbacks</b> é o caminho — o que entra aqui costuma ter
         começado lá.
       </p>
