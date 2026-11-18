@@ -69,7 +69,7 @@
  },
  {
   "id": "3f71cf94-a451-5caa-bc25-ba5611625604",
-  "nome": "Soneca no Banheiro"
+  "nome": "Descanso no Banheiro"
  },
  {
   "id": "8b0bba55-009c-599c-98e2-fef03ebe7e79",
@@ -189,7 +189,7 @@
  },
  {
   "id": "cca0dd64-0316-5517-84fb-687c114df081",
-  "nome": "Deixar pra Amanhã"
+  "nome": "Remediar"
  },
  {
   "id": "540d7c81-046e-5924-b9b3-4d019b16d50f",
@@ -265,7 +265,7 @@
  },
  {
   "id": "1d5c9c9f-75d4-59fe-96b8-92ec5bf937e3",
-  "nome": "Sexta de Folga"
+  "nome": "Feriado"
  },
  {
   "id": "97a168f0-d090-5753-9186-733ed9300efd",
@@ -294,5 +294,45 @@
  {
   "id": "ee88ab97-f4dc-55bb-8662-1eff0373f34d",
   "nome": "Chamado de Madrugada"
+ },
+ {
+  "id": "4a6f0c3c-b092-5a5f-991e-bc9796d6b1c9",
+  "nome": "IA"
+ },
+ {
+  "id": "71948be4-2287-5a65-b284-a4b94a8d9adc",
+  "nome": "Conversa Demorada"
+ },
+ {
+  "id": "f79b3ff2-d2e1-53d0-adae-3b8e2348a5b2",
+  "nome": "Proatividade"
+ },
+ {
+  "id": "154df849-ce87-5dea-ae36-ba9ea6bb8434",
+  "nome": "Vitaminas"
+ },
+ {
+  "id": "2599b33c-b701-53a8-81cc-8b1d94f54da0",
+  "nome": "Motivação"
+ },
+ {
+  "id": "535f891b-3560-45d3-91f6-a09a2c0031ca",
+  "nome": "Rotina Saudável"
+ },
+ {
+  "id": "c29fbc8a-e530-5c3c-8802-74fb2c1c4b48",
+  "nome": "Morcegar"
+ },
+ {
+  "id": "23061ec3-4f8a-5d01-a26e-cd858fdceaf8",
+  "nome": "Assalto"
+ },
+ {
+  "id": "73c1ad70-3fa5-59c5-9c34-12b94dfea596",
+  "nome": "Golpe do Zap"
+ },
+ {
+  "id": "d35801e8-7c73-587a-bd3d-13864014701f",
+  "nome": "Hiperfoco"
  }
 ]
