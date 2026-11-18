@@ -1,70 +1,156 @@
+// A porta do lab (v0.48): três prateleiras de bancadas e uma fileira de
+// ferramentas que abrem em popup. Papel e tinta do resto do site; o amarelo
+// do destaque marca o que se clica.
+
+.lab
+  display: flex
+  flex-direction: column
+  gap: 28px
+  max-width: 1080px
+
+.cabecalho
+  display: grid
+  gap: 6px
+
 .titulo
-  font-size: clamp(24px, 5vw, 32px)
+  margin: 0
+  font-size: clamp(26px, 5vw, 36px)
 
 .intro
   max-width: 62ch
-  margin: 6px 0 24px
+  margin: 0
   color: var(--tinta-fraca)
   font-size: 14px
   line-height: 1.6
 
-.bancadas
-  display: flex
-  flex-wrap: wrap
+.grupo
+  display: grid
   gap: 12px
 
-.bancada
-  display: grid
-  grid-template-columns: auto 1fr
-  align-items: center
-  gap: 4px 12px
-  flex: 1 1 280px
-  padding: 16px 18px
-  background: var(--papel-alto)
-  border: 1px solid var(--linha)
-  border-radius: 8px
-  color: var(--tinta)
-  text-decoration: none
-
-  svg
-    grid-row: span 2
-    color: var(--destaque)
-
-  b
-    font-size: 16px
-
-  span
-    color: var(--tinta-fraca)
-    font-size: 12px
-    line-height: 1.45
-
-  &:hover
-    border-color: var(--tinta)
+.grupoCabeca
+  display: flex
+  flex-wrap: wrap
+  align-items: baseline
+  gap: 4px 14px
+  padding-bottom: 6px
+  border-bottom: 1px dashed var(--linha)
 
 .secao
-  margin: 32px 0 8px
-  font-size: 13px
-  letter-spacing: .1em
+  margin: 0
+  font-family: var(--mono)
+  font-size: 12px
+  font-weight: 700
+  letter-spacing: .12em
   text-transform: uppercase
-  color: var(--tinta-fraca)
+  color: var(--tinta)
 
 .aviso
-  max-width: 58ch
-  margin: 0 0 12px
+  margin: 0
   color: var(--tinta-fraca)
   font-size: 13px
   line-height: 1.5
 
-.acoes
-  display: flex
-  flex-wrap: wrap
-  gap: 8px
+.bancadas
+  display: grid
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr))
+  gap: 10px
+
+// uma linha de pasta: ícone num carimbo redondo, nome, uma linha de texto e
+// a seta, que anda um pouco ao passar o mouse
+.bancada
+  display: grid
+  grid-template-columns: auto 1fr auto
+  grid-template-rows: auto auto
+  align-items: center
+  gap: 2px 12px
+  padding: 14px 14px 14px 12px
+  background: var(--papel-alto)
+  border: 1px solid var(--linha)
+  border-radius: 10px
+  color: var(--tinta)
+  text-decoration: none
+  transition: border-color .15s ease, transform .15s ease
+
+  b
+    font-size: 15px
+
+  &:hover
+    border-color: var(--tinta)
+
+    .seta
+      transform: translateX(3px)
+      color: var(--tinta)
+
+  &:focus-visible
+    outline: 2px solid var(--destaque)
+    outline-offset: 2px
+
+.icone
+  grid-row: span 2
+  display: grid
+  place-items: center
+  width: 40px
+  height: 40px
+  border-radius: 50%
+  background: color-mix(in srgb, var(--destaque) 16%, var(--papel))
+  color: var(--destaque)
+
+.texto
+  grid-column: 2
+  color: var(--tinta-fraca)
+  font-size: 12px
+  line-height: 1.4
+
+.seta
+  grid-row: 1 / span 2
+  grid-column: 3
+  color: var(--tinta-fraca)
+  transition: transform .15s ease, color .15s ease
+
+// as ferramentas: botões de papel mais altos, que abrem popup
+.ferramentas
+  display: grid
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))
+  gap: 10px
+
+.ferramenta
+  display: grid
+  justify-items: start
+  gap: 6px
+  padding: 16px
+  background: var(--papel)
+  border: 1px dashed var(--tinta-fraca)
+  border-radius: 10px
+  color: var(--tinta)
+  font: inherit
+  text-align: left
+  cursor: pointer
+  transition: border-color .15s ease, background .15s ease
+
+  svg
+    color: var(--destaque)
+
+  b
+    font-size: 15px
+
+  span
+    color: var(--tinta-fraca)
+    font-size: 12px
+    line-height: 1.4
+
+  &:hover
+    background: var(--papel-alto)
+    border-color: var(--tinta)
+
+  &:focus-visible
+    outline: 2px solid var(--destaque)
+    outline-offset: 2px
 
 .recado
   display: flex
   align-items: center
   gap: 7px
-  margin: 14px 0 0
+  margin: 12px 0 0
   padding: 10px 14px
   background: var(--papel-alto)
   border-left: 3px solid var(--produtividade)
@@ -72,20 +158,55 @@
   font-size: 13px
 
   svg
+    flex: none
     color: var(--produtividade)
 
 .dialogoTexto
-  margin: 0
+  margin: 0 0 12px
   color: var(--tinta-fraca)
   font-size: 14px
   line-height: 1.55
+
+  code
+    font-family: var(--mono)
+    font-size: 12px
+
+// os atalhos: uma linha por atalho, o que faz à esquerda e o botão à direita
+.atalhos
+  display: grid
+  gap: 8px
+
+.atalho
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 12px
+  padding: 10px 12px
+  background: var(--papel-alto)
+  border: 1px solid var(--linha)
+  border-radius: 8px
+
+  > div
+    display: grid
+    gap: 2px
+    min-width: 0
+
+  b
+    font-size: 14px
+
+  span
+    color: var(--tinta-fraca)
+    font-size: 12px
+    line-height: 1.4
+
+  button
+    flex: none
 
 // o presente: nick, carta e recado, um embaixo do outro
 .presente
   display: flex
   flex-direction: column
   gap: 8px
-  max-width: 420px
 
   .recado
     margin-top: 4px

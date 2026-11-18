@@ -11,7 +11,7 @@ import { caminhosDaCarta, comentarioDaCarta, descreverCarta, linhasDaCarta } fro
 import { LockIcon, RESOURCE_ICONS, TONE_ICONS, iconeDaClasse } from '../icons'
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import { apontarParaTremer } from '@/data/vibrar'
-import { useEstiloDaArte } from '@/data/estiloDaArte'
+import { useEstiloDaArte, type EstiloDaArte } from '@/data/estiloDaArte'
 import { arteDaCarta } from '@/data/artes'
 import styles from './Card.module.sass'
 
@@ -69,6 +69,9 @@ export interface CardProps {
   /** Um selo a mais no canto de cima, ao lado do da classe (o dado da carta
    *  de sorte). */
   seloExtra?: ReactNode
+  /** Força o estilo da arte nesta carta, por cima do de Configurações: o
+   *  "antes e depois" da apresentação, sem mexer na escolha de quem joga. */
+  estiloDaArte?: EstiloDaArte
 }
 
 function isEvent(card: ActionCard | EventCard): card is EventCard {
@@ -104,6 +107,7 @@ export default function Card({
   caminhoAtivo,
   efeitoAtivo,
   usada,
+  estiloDaArte: estiloForcado,
 }: CardProps) {
   const ref = useRef<HTMLDivElement>(null)
   const palco = useRef<HTMLLabelElement & HTMLDivElement>(null)
@@ -123,7 +127,8 @@ export default function Card({
   const Icon = evento ? TONE_ICONS[card.tone] : iconeDaClasse(card.kind)
   // a imagem da carta no estilo escolhido em Configurações (v0.48); sem
   // imagem para esta carta, ou no estilo "ícone", fica o ícone da classe
-  const estiloDaArte = useEstiloDaArte()
+  const estiloEscolhido = useEstiloDaArte()
+  const estiloDaArte = estiloForcado ?? estiloEscolhido
   const imagem = estiloDaArte === 'icone' ? null : arteDaCarta(card.id, estiloDaArte)
   const custo = evento ? null : (cost ?? card.cost)
   const base = evento ? [] : custosDe(card)
@@ -373,6 +378,9 @@ export default function Card({
             // sem imagem, o ícone do meio já diz o naipe: o do canto sai
             // (menos na bloqueada, em que o canto é o cadeado)
             !imagem && !locked ? styles.soIcone : '',
+            // o evento com rabisco é pintado inteiro na cor do tom, e o
+            // traço vai por cima em branco (preto no tema escuro)
+            evento && imagem ? styles.eventoPintado : '',
           ].join(' ')}
         >
           {custo !== null ? (
