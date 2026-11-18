@@ -1,0 +1,2557 @@
+> **Registro detalhado das decisões.** Este é o CLAUDE.md completo como estava
+> em 18/11/2026 (v0.48), com a história de cada escolha: as versões recusadas,
+> os porquês, as medições. Ele saiu da raiz porque entrava inteiro em toda
+> conversa com a IA (~45 mil tokens). O [`CLAUDE.md`](../CLAUDE.md) da raiz é o
+> resumo que vale; leia AQUI a seção do assunto antes de mexer numa área
+> delicada (motor, avatar, recompensas, banco). Novas decisões grandes podem
+> ganhar um parágrafo aqui; as regras e armadilhas ativas vão no CLAUDE.md.
+
+# CLT — contexto do projeto
+
+Arquivo de contexto para quem (pessoa ou IA) for mexer neste repositório sem ter
+acompanhado a construção. (Existe também um `CONTEXTO-TOTAL-<data>.md`, que é
+uma FOTO datada para levar o projeto a outra conversa e não é mantido — se os
+dois discordarem, este aqui ganha. E `CONTEXTO-VOZ.md` está desatualizado.) O [`README.md`](../README.md) é o documento do jogo — as
+regras, as cartas, o balanceamento. Aqui está o resto: como o código está
+organizado, o que foi decidido e por quê, e as armadilhas que já custaram tempo.
+
+**Trabalho de faculdade.** Luiz Adolfo Frederico — CC4M. Single player, sem
+multiplayer, sem monetização, sem dados sensíveis.
+
+---
+
+## O jogo em um parágrafo
+
+Card game roguelike sobre atravessar um mês de trabalho formal sem ficar no
+vermelho e sem surtar. Cada dia é uma rodada, cada semana é uma cobrança do
+chefe, o mês inteiro é uma run. O que sustenta o jogo é que **o estresse não some
+sozinho**: `Energia do dia = 10 − Estresse`, então um dia mal administrado
+encolhe todos os dias seguintes. Vence quem chega ao fim das 4 semanas empregado
+e com as contas pagas; a pontuação é o dinheiro que sobrou.
+
+Quatro recursos: **energia** (reinicia todo dia), **estresse** (acumula entre os
+dias), **produtividade** (zera todo dia, é o que o chefe mede), **dinheiro**
+(acumula, sai nas contas de sexta).
+
+Três derrotas: estresse chega a 10 (burnout), 3 advertências (demissão), não
+pagar as contas de sexta (despejo).
+
+---
+
+## Estado atual
+
+Jogável de ponta a ponta: 20 dias, 4 semanas, as três derrotas e a vitória
+funcionam. No ar em <https://lx-xz.github.io/clt/>, deploy automático a cada push.
+
+| Rota | O que é |
+|---|---|
+| `/auth` | A porta: entrar, criar conta (e-mail/senha ou Google), ou jogar como convidado. Fora de `(app)`; quem já tem sessão é mandado para `/` |
+| `/` | O início, dentro de `(app)`, LIMPO de propósito (v0.19): a capa do avatar de ponta a ponta (v0.25, a mesma `AvatarHero` do perfil, sem canto nem margem, com a cara do estresse da run salva), UM botão, "Jogar" ou "Continuar", montado na borda de baixo da capa (v0.33: o cartão do "Bom dia, nick" saiu), e as missões do dia com os envelopes por abrir. Última partida, amigos e conquistas moram no perfil |
+| `/termos` | Termos de uso. Fora de `(app)`: dá para ler sem estar logado |
+| `/jogar` | A mesa. Ocupa a janela inteira, sem rolagem |
+| `/baralho` | Cartas equipadas, não equipadas e bloqueadas |
+| `/ranking` | Placar público: medalha nas três primeiras, avatar redondo, nick e V/D à direita. A linha inteira leva ao perfil; não há mais "abrir para ver mais" |
+| `/perfil` | O seu. Desde a v0.34 o seu e o dos outros são o MESMO componente (`components/Perfil`): capa, nick, "desde", o placar (posição, vitórias, derrotas, melhor saldo) e as abas Resumo (última partida, selos das conquistas, amigos), Conquistas (era popup), Baralhos e Cartas. Nome, e-mail, pontos e Sair NÃO moram aqui: moram em Configurações |
+| `/perfil/editar` | O editor do avatar |
+| `/jogador?nick=` | O perfil de outra pessoa, o mesmo componente do seu, com o botão de amizade. Quem NÃO é amigo vê só o resumo; o AMIGO vê também os baralhos e as cartas, e pode copiar um baralho dele para o seu (por cima do equipado, ou num baralho novo; só entra o que a pessoa tem, `copiarBaralho`). Quem decide é o banco (`colecao_de_amigo` confere a amizade e só devolve carta: nada de saldo, recompensa fechada ou máquina). **Sem nome, e-mail ou pontos** |
+| `/meus-jogos` · `?nick=` | Todas as partidas, como recibos resumidos, com filtro por desfecho e ordem. Sem `nick` é a sua (a única que mostra as de "pediu demissão") |
+| `/meus-jogos/detalhe?id=` | Replay dia a dia de uma run, com as cartas desenhadas — a sua (`jogo_detalhe`) ou, se não for sua, a de outra pessoa (`jogo_publico`) |
+| `/comunidade` | Novidades, Feedbacks e Análise, em abas. É a única das três no menu |
+| `/maquina` | A máquina de vendas (v0.29): três cartas e três itens por dia, comprados com tokens, SEM texto nenhum na página (v0.33: só a máquina, que cabe inteira no celular sem rolar). De TODO MUNDO desde a v0.34. Na temporada de Halloween (`temporadaDeHalloween`: outubro e 1–2 de novembro) ganha a prateleira C, a abóbora: `PRECO_DA_ABOBORA` tokens, a primeira grátis (`Collection.aboboraGratis`), e ela traz um item de Halloween que a pessoa NÃO tem — nem prometido numa recompensa fechada (`halloweenQueFalta`). Comprada, entra fechada na fila de recompensas e abre ao tocar na boca. No celular, com três prateleiras, os itens encolhem pela altura da tela (`dvh`) e o letreiro some. O início mostra o aviso "O Halloween chegou ao escritório" na temporada, e o aviso inteiro é o link para a máquina |
+| `/nova-senha` | Onde o link de "esqueci a senha" cai. Fora de `(app)` |
+| `/lab` · `/lab/cartas` · `/lab/eventos` · `/lab/regras` · `/lab/envelopes` (abrir recompensa com a animação do jogo, e o que sai vai para a conta do admin) · `/lab/museu` (as versões de antes: o envelope de CSS, a maleta de couro e a escada em 3D de CSS; a primeira proposta, `/lab/propostas`, fica fora da lista e é linkada de lá) | A oficina. **Só admin**, pelo layout de `/lab` |
+
+**48 cartas de ação** (8 tipos iniciais somando 15 cartas no baralho, 40
+desbloqueáveis, em três raridades) e **26 cartas de evento**, das quais 4 são ambíguas e pedem uma
+escolha. Esses números são os da última cópia do código (v0.38); o que está
+no ar é o que estiver na tabela `cartas`, e desde a v0.39 é SÓ lá que as
+cartas moram — veja abaixo.
+
+---
+
+## Stack
+
+| | |
+|---|---|
+| Next 15 (App Router) + React 19 | export estático — não há servidor |
+| TypeScript 5 | **não subir para a 7**: quebra o carregador do `next.config.ts` |
+| Sass **indentado** (`.sass`, sem chaves) | pedido do autor; não converter para `.scss` |
+| `lucide-react` | ícones, MIT e tree-shakeable |
+| `@supabase/supabase-js` | banco, chamado direto do navegador |
+
+**O que foi deliberadamente recusado:** nenhuma lib de animação (as animações são
+CSS + um `requestAnimationFrame` de 30 linhas), nenhum gerenciador de estado
+(`useState` basta), nenhum framework de UI. Só adicione dependência se ela pagar
+o próprio peso — o jogo é pequeno.
+
+---
+
+## Arquitetura
+
+```
+src/game/     regras puras — nenhum import de React
+  types.ts      GameState e companhia
+  acoes.ts      o catálogo de AÇÕES: o vocabulário que carta e evento têm
+  catalogo.ts   quais cartas e eventos existem agora — a porta única de getCard
+  regras.ts     os modos de jogo: aluguel, cota, salário, energia base
+  colecao.ts    cópias, baralhos montados e o sorteio de cartas
+  missoes.ts    missões diárias e envelopes: de onde vem carta nova
+  engine.ts     o motor: funções puras GameState -> GameState
+  storage.ts    localStorage (espelho), validação de formato do save
+  session.ts    quem está jogando (perfil da conta, ou o convidado)
+src/data/     tudo que fala com o Supabase
+  supabase.ts   cliente, normalização da URL
+  conta.ts      contas: entrar, cadastrar, Google, convidado, sair
+  nick.ts       regras do nick, espelhando as constraints da tabela
+  saves.ts      baixar/subir save, registrar run terminada
+  sync.ts       banco como fonte da verdade, localStorage como espelho
+  feedback.ts   bugs e sugestões, tudo por RPC
+  notificacoes.ts  o sininho da barra lateral
+  changelog.ts  o histórico de versões, escrito à mão
+  cartas.ts     o catálogo do lado do banco: tradução, carga e as RPCs de admin
+  balanceamento.ts  as perguntas que a interface faz sobre versões de carta
+  amizades.ts   pedir, aceitar, desfazer, listar
+  conquistas.ts conferir depois de uma run, e listar
+  pendencias.ts "há algo por salvar?" — quem navega pergunta antes
+src/components/  uma PASTA por componente: X/X.tsx, X/X.module.sass e um
+                 X/index.ts que reexporta tudo — quem importa continua
+                 escrevendo `@/components/X`. Componente novo nasce assim;
+                 de um componente para outro, o import é `../X`
+                 (Card, CardDetail, Medidor, SideNav, SessaoGuard, Dialogo,
+                 ComoJogar, icons e o resto)
+src/app/
+  auth/              a porta: entrar, cadastrar, Google ou convidado
+  (app)/page.tsx     o início de quem já entrou
+  termos/            termos de uso, fora da guarda de sessão
+  (app)/layout.tsx   guarda de sessão + barra lateral
+  (app)/jogar/       a mesa
+  (app)/baralho/     montagem do baralho
+supabase/schema.sql  o banco inteiro, para rodar no SQL Editor
+supabase/reset.sql   apaga tudo (contas inclusive) para recomeçar do zero
+```
+
+**O princípio que sustenta tudo:** `src/game/` não importa React. O motor é um
+conjunto de funções puras sobre `GameState`, o que permite **simular runs fora do
+navegador** para checar balanceamento sem passar pela interface. Foi assim que os
+números da seção de balanceamento saíram. Não coloque lógica de regra em
+componente.
+
+---
+
+## Regras implementadas que não estão no design em papel
+
+O README original foi escrito antes de qualquer código. Duas coisas mudaram:
+
+### O que a carta faz é dado, e agora não sobrou exceção
+
+`ActionCard.efeitos` é uma lista de **ações** do catálogo em `src/game/acoes.ts`
+— `recurso`, `comprar`, `descartar`, `custo`, `advertencia`, `sorteio` e mais
+uma dúzia —, cada bloco com um `se` (condição) e um `quando` (gatilho)
+opcionais. `playCard` roda a lista e acabou: **o motor não conhece o id de
+carta nenhuma.** As cinco que tinham `case` no `switch` viraram dado como
+qualquer outra:
+
+| Carta | Como virou dado |
+|---|---|
+| Reunião | dois blocos excludentes por `se: jaJogadaHoje` |
+| Foco Total | `descartar: 'tudo'` |
+| Puxar o Saco | `restricao: { umaVezPorRun, exige: advertencias ≥ 1 }` + `advertencia: −1` |
+| Automatizar | `produtividadePassiva: +1` |
+| Pedir Aumento | `sorteio` com `entao`/`senao` |
+
+Os 20 eventos seguiram o mesmo caminho (`EventCard.efeitos`, e as escolhas dos
+ambíguos carregam suas próprias `acoes`), então `revealEvent` também perdeu o
+`switch`. `especial: true` continua existindo, mas com outro sentido: marca a
+carta que faz mais do que somar recurso, para o editor avisar que mexer só nos
+números não conta a carta inteira.
+
+**Duas regras seguram isto de pé:**
+
+1. **A composição acontece na LISTA, não em função nova.** "Reembaralhar 1" não
+   é uma ação: é `descartar(1)` seguido de `comprar(1)`. Se cada combinação
+   virar primitiva, em três meses são trinta primitivas — e trinta linhas para
+   ler antes de entender uma carta.
+2. **Isto não é para virar linguagem de programação.** Laço, variável e
+   expressão ficam de fora; o que não couber continua sendo código no motor, e
+   tudo bem. Desde que existe um editor visual, a régua deixou de ser "o editor
+   aguenta desenhar isso?" e passou a ser a única que sempre valeu: **cabe numa
+   carta que alguém lê na mão, em três linhas?**
+   O aninhamento é sempre "uma lista dentro de um campo", e os pontos são
+   `sorteio.entao/senao`, `se.entao/senao`, `escolherDescarte.entao`,
+   `amanha.acoes`, cada opção de `escolha`, e condição dentro de condição
+   (`nao`/`todas`/`alguma`). São muitos mais do que os dois de antes, e ainda
+   assim é a mesma forma repetida — é por isso que o editor não cresceu junto.
+3. **Ação nova precisa de um descritor.** Quem sabe desenhar o formulário de
+   uma ação é `src/app/(app)/lab/_catalogo/descritores.ts`, e ela é um
+   `satisfies Record<Acao['faz'], Descritor>` — esquecer o descritor quebra o
+   build, em vez de deixar a ação sem editor em silêncio.
+
+**O vocabulário mudou de novo na v0.12, e as trocas foram estas:**
+
+| Antes | Agora | Por quê |
+|---|---|---|
+| `salarioPermanente` · `produtividadePassiva` | `recorrente` (`qual`, `quanto`, `cada`, `duracao`) | eram a mesma ideia escrita duas vezes: uma somava na sexta, a outra todo dia. O que as separava não era o recurso, era a CADÊNCIA — e de brinde veio a `duracao`, que não existia |
+| `amanha { qual, quanto }` | `amanha { acoes }` | adiar valia para dois números escolhidos a dedo; agora vale para qualquer coisa |
+| `aviso` | `mensagem` | ela escrevia numa lista que **ninguém desenhava**. Agora aparece na mesa |
+| — | `se { condicao, entao, senao }` | o `se` só existia no nível do bloco: dentro de um `sorteio` não dava para perguntar nada |
+| — | `escolha { opcoes }` | a carta pergunta, como os eventos ambíguos já faziam |
+| — | `nao` · `todas` · `alguma` | um bloco só conseguia perguntar UMA coisa |
+| — | `dia` · `semana` · `cartasNaMao` · `cartasJogadasHoje` · `classeJogadaHoje` | `cartasJogadasHoje noMaximo: 0` é "só se for a primeira do dia", e é mais geral do que uma condição com esse nome |
+| — | gatilhos `aoDescartar` e `fimDaSemana` | a carta reage a SAIR da mão, e a semana ganhou um fechamento |
+
+**A armadilha que essa troca cria, e que vale para qualquer troca futura:** as
+cartas moram no BANCO desde a v0.10, e o `switch` de `executarAcao` **não tem
+`default`**. Tirar um nome da união faria a carta que está no ar carregar uma
+ação que o motor não conhece — sem erro, sem aviso, sem efeito. Por isso a
+tradução do vocabulário antigo acontece na LEITURA (`migrarAcoes` em
+`acoes.ts`, chamada por `src/data/cartas.ts`), exatamente como `lerAvatar()`
+valida a receita do avatar. Não há migração para rodar no banco: salvar a carta
+de novo no `/lab` já grava o formato de hoje.
+
+**Guardar para amanhã (v0.40, `guardarParaAmanha`)** é o irmão do
+`escolherDescarte`: o mesmo pedido à mão (`escolhaDeDescarte`, agora com
+`guardar: true`), mas a carta escolhida não vai ao descarte nem dispara o
+`aoDescartar` — vai para `GameState.guardadas` (opcional, sem subir a chave
+do save) e volta POR CIMA da mão do dia seguinte (`devolverGuardadas`,
+logo depois do `draw` e antes do `aposComprar`). Na mesa, o rótulo da
+carta escolhível vira "Guardar" (`.guardavel`). O "Deixar pra Amanhã" adia
+um problema; isto adia uma carta. Conferido com o simulador: a saída das
+cartas de sempre não mudou.
+
+**Dados no lugar do número (v0.41, `Quantia` em `acoes.ts`).** O `quanto`
+de `recurso` e de `cota` e o `quantas` de `comprar` aceitam, além do número,
+uma ROLAGEM: `{ dados, lados, mais?, negativo? }` ("1d3", "2d6+1", "−1d4").
+Quem rola é `resolver()`, pelo `ctx.sorte` (o simulador continua
+determinístico), e a rolagem fica em `GameState.ultimaRolagem` (opcional,
+com `selo` como a mensagem). O bot do simulador e o "custo escondido" do
+lab contam pela média (`mediaDe`). No `/lab/cartas` é o campo `quantia`:
+número ou dados, com o sinal, a quantidade, os lados e o "+".
+Na mesa, `DadosNaMesa` joga os dados no tapete quando o `selo` muda: a
+física de `components/Dado3D/RolagemNaMesa` (gravidade, quique nas bordas,
+atrito, colisão entre dados) e, quando eles quase param, um `slerp` até a
+face que o MOTOR sorteou, DEITADA na mesa (paralela ao tampo, o número de
+pé para quem olha). O centro do dado fica na altura em que o vértice mais
+baixo encosta no tampo (`alturaDeApoio`), e é isso que o faz tombar de
+aresta em aresta e a moeda ficar rente ao chão. A câmera é que fica mais de
+cima (`INCLINACAO` 24°): na v0.41 a face era desvirada da inclinação para
+olhar a câmera, e o dado parava meio em pé, apoiado em nada. O d4 não para
+com face para cima: o número mora nos CANTOS (`Solido.cantos`), a face
+sorteada vai para baixo (`apoiaNaFace`) e vale a ponta de cima.
+O d100 são dois d10 (a dezena em vermelho), a moeda é a d2 dourada.
+**Desde a v0.42 quem tira o número é a JOGADA, não um sorteio feito antes.**
+Na mesa, a carta que rola PAUSA (`GameState.rolagemAberta`, opcional, como
+a `escolhaAberta`: a lista para e o resto espera em `resto`; `pausaAberta`
+olha as duas, e `dispararEfeitos` empilha os blocos seguintes ali, com a
+condição conferida na hora). Os dados esperam no tapete e só se jogam
+com a MÃO: a pessoa arrasta e solta (a velocidade do gesto é o lançamento).
+O botão "a mesa joga" existiu e saiu a pedido do autor; quem usa teclado
+foca a mesa e aperta Enter, e aí a mesa lança por ela. E quando eles quase param o resultado é a face MAIS VIRADA PARA CIMA naquele
+instante (`faceDeCima`; no d4, a mais virada para baixo) — o assentar é só
+o fim do tombo, sem cambalhota de última hora. A soma fica à vista, os
+dados esmaecem e só então `responderRolagem(state, valores)` segue a carta
+(ela confere os valores: dado a mais ou fora da faixa não entra). Quem
+liga isso é a mesa (`jogarDadosNaMesa(true)` ao montar, `false` ao sair):
+sem ela (o simulador, inclusive o do lab no navegador) o motor sorteia na
+hora pela `sorte`, e a saída do simulador não mudou (`--hash`, 150 runs).
+Só a carta jogada pausa (`contexto(id, true)` em `playCard`, na resposta
+de `escolha`, no `entao` do descarte e na própria `responderRolagem`):
+evento e começo de dia rolam na hora, pela mesma razão da `escolha`, e a
+mesa os joga sozinha até a face que saiu. A rolagem da mão grava
+`ultimaRolagem.naMao`, que a mesa não joga de novo.
+**A carta de SORTE é uma barra dividida (v0.43, ação `rolar`).** Um dado
+só (`lados`) e uma lista de `saidas` — cada uma `{ de, ate, texto, tom,
+acoes }` —, e roda as ações da faixa em que o dado caiu: é o `sorteio` com
+mais de duas saídas e com o dado à vista. A carta que tem um `rolar`
+(`rolarDaCarta`) se DESENHA sozinha como barra (`components/BarraDaSorte`,
+escolhida pelo autor entre os protótipos do `/lab/sorte`): uma faixa por
+saída, da altura da chance dela, com as faces escritas em cima e o `texto`
+da faixa embaixo; o `text` da carta, se houver, vai numa linha por cima
+(é o que ela faz ALÉM do dado — o lab avisa), e o selo do canto diz o
+dado. As cores dizem o TOM, e o tom é de quem faz a carta: verde e
+vermelho só para "deu certo / deu errado", três neutras que não julgam, e
+`semCor` (a caixa "Faixas sem cor" do editor) tira a cor de todas. Na
+mesa ela pausa como qualquer rolagem (`rolagemDe` entrega o dado;
+`comQuantia` devolve a ação com `saiu`, que só o motor preenche), e
+`ultimaRolagem.saida`/`cartaId` acendem a faixa que saiu na carta jogada.
+**As cartas de `sorteio` de antes NÃO viram barra sozinhas**: elas têm
+uma chance e duas listas, sem texto por saída — refazê-las com "Rolar
+dado (faixas)" no `/lab/cartas` é escolha de quem balanceia. O editor
+(`ListaDeSaidas`) acusa face sem faixa e face em duas.
+`migrarAcao` converte o `lados` em número (o `<select>` guarda "10").
+
+**A descrição da carta sai das ações (v0.44, `src/game/descricao.ts`).**
+`descreverCarta` escreve o que a carta faz a partir do mesmo dado que o
+motor roda, curto e com o ÍCONE do recurso DEPOIS do número
+("+1{estresse}" é o 1 e o foguinho — antes do número foi a primeira
+tentativa, e o autor preferiu depois; a notação `{energia}`, `{estresse}`,
+`{produtividade}`, `{dinheiro}` e `{advertencia}` é desenhada por
+`TextoComIcones`, na cor do medidor, e `textoSemReais` a lê em voz alta).
+Rebalancear no lab já muda o que a carta diz — o texto à mão era "a única
+coisa que pode mentir". Toda ação tem uma linha no `switch` de
+`descreverAcao`, sem `default`: ação nova sem descrição quebra o build.
+O TEXTO ESCRITO virou o COMENTÁRIO da carta (a sátira), em itálico: sempre
+no detalhe (o popup do clique), e na face da carta SÓ quando cabe inteiro
+junto com a ação — o `Card` mostra, mede (texto ou comentário cortados?) e
+esconde (`hidden`), de novo a cada mudança de tamanho (`ResizeObserver`).
+Na carta de sorte e na de caminhos ele não vai na face. **A regra da transição** (`comentarioDaCarta`):
+texto com número ou "R$" é a descrição de antes e fica escondido; sem
+número, é comentário. O `/lab/cartas` mostra a descrição gerada, chama o
+campo de "Comentário da carta", avisa quando o texto ainda é descrição, e
+tem a seção "Cartas com a descrição de antes", que troca o texto pelos
+comentários sugeridos (`lab/cartas/comentarios.ts`, pelo NOME da carta) —
+um salvamento com motivo por carta, como sempre. Houve uma escolha em
+Configurações para voltar à descrição escrita; o autor a tirou, e a
+descrição com ícones é a única. Evento continua escrito, e a carta de sorte
+põe a descrição automática (sem o `rolar`) em cima da barra.
+
+**A restrição se edita no `/lab/cartas` (v0.44, "Quando dá para jogar").**
+`ActionCard.restricao` (`umaVezPorRun`, `exige`) é o que `canPlay` confere
+ANTES dos efeitos, e o lab nunca a mostrou: ela veio do código antigo para o
+banco e ficou invisível, enquanto o "Só se: Sempre" de cada BLOCO parecia
+dizer que a carta não tinha limite. A descrição automática (o "1× por
+partida" do Grito no Travesseiro) estava certa; o editor é que escondia o
+dado. Hoje é a caixa "Uma vez por partida" e o "Só dá para jogar com".
+
+**"Se X, senão Y" também é barra dividida (v0.44, `caminhosDaCarta`).**
+A carta com dois ou mais blocos de condição (a Reunião), com uma ação `se`
+que tem `senao` (o Prazo Apertado), ou com um `sorteio` de duas saídas (a
+Pedir Aumento) se desenha com `BarraDeCaminhos`: a condição (ou a chance)
+no lugar das faces do dado, o que acontece embaixo, e o resto da carta na
+linha de cima. As de condição têm a mesma altura, as de sorteio a altura da chance. `se` sem
+`senao` não é caminho ("e, se tal, mais isto") e continua no texto. A
+barra é uma só (`BarraDividida`, dentro de `BarraDaSorte`), para sorte e
+para caminhos.
+**Toda barra dividida é SEM COR** (pedido do autor): nada de verde,
+vermelho, azul ou amarelo; a faixa é papel e um fio de tinta. O `tom` das
+saídas do `rolar` e o `semCor` continuam no dado das cartas já salvas, mas
+não pintam mais nada, e o editor não os oferece.
+**O detalhe da carta (`CardDetail`, v0.45):** a carta fica sozinha, PARADA
+(o sobe e desce saiu a pedido do autor), na cortina escura (sem janela), ampliada por `zoom` (as fontes da carta têm
+teto em px, e só o zoom cresce o texto junto), e as informações vêm
+escritas direto na cortina, ao lado — com as cores do tema escuro na
+coluna, porque a cortina é escura nos dois temas. O "Jogar" tem o ícone de
+play, e o X redondo mora no canto da CENA (`width: fit-content`), perto da
+carta: no canto da tela ficava longe. O autor provou duas versões (as
+informações num cartão de papel, e assim) e o brilho da raridade atrás da
+carta; escolheu esta, SEM o brilho.
+
+**Os caminhos dizem o TOTAL, e o que vale agora acende (v0.46).** A carta
+que faz uma coisa sempre e mais uma com condição (a Meditação no Banheiro:
+um bloco "6+🔥: −2🔥" e outro "−2🔥") também vira barra de caminhos, com a
+soma de cada um ("6+🔥: −4🔥", "senão: −2🔥", `mesclar` em `descricao.ts`);
+o mesmo para o `se` sem `senao` no meio das ações (a Reunião que Podia Ser
+E-mail). Cada `Caminho` leva a condição (`cond`), e na MÃO o motor diz qual
+vale agora (`caminhoAtivo` em `engine.ts`): ele fica contornado na cor da
+tinta (branco no tema escuro) e os outros esmaecem. A condição nova
+`efeitoAtivo` ("ativa") pergunta se um efeito que ESTA carta deixou ainda
+vale — é com ela que a Automatizar vira "não ativa: +2↗, +1↗ todo dia por
+6 dias" / "ativa: +1↗" (a carta se refaz no `/lab`). O efeito ativo aparece
+na carta como "dia N/total" (`diaDoEfeito`, pelo `Recorrente.total`,
+opcional: quem gravou antes vê "ativa"), contando o dia em que ela saiu
+como o 1; e a carta de 1× por partida que já saiu leva o carimbo "usada".
+
+**A condição vai EM CIMA do que ela libera (v0.44, `linhasDaCarta`).** Na
+face da carta a descrição sai em linhas: a condição (ou o gatilho, "Na
+sexta") num rótulo de letra de máquina com um fio do lado — o desenho das
+faixas da barra, sem cor —, e o efeito embaixo. "Só com 4+🔥" em cima de
+"−3🔥, +4↗"; um `se` sem `senao` sai numa linha própria. A restrição da
+carta é o rótulo da primeira linha sem condição. O texto corrido
+(`descreverCarta`) continua no detalhe, no lab e no leitor de tela. Cada
+linha é flex em coluna, então o texto com ícones mora num `<span>`: solto,
+cada pedaço (o número, o ícone, a vírgula) virava um item numa linha.
+
+**O dado é 3D de CSS** (faces do fecho convexo dos vértices, cada uma um SVG
+posto por `matrix3d`): vale a armadilha do 3D achatado, e o `overflow` mora
+só na raiz da cena.
+
+**`escolha` e `escolherDescarte` PARAM a lista.** `executar` devolve o que
+faltava para dentro da pergunta (`escolhaAberta.resto`) e retoma ao responder —
+senão as ações depois da pergunta aconteceriam antes dela, que é contar o fim
+antes do começo. **A ação `escolha` é só de CARTA:** num evento, a pausa não
+sobrevive à compra da mão que vem logo depois do efeito, e `revealEvent` a
+descarta com uma linha no histórico em vez de deixar a mesa travada.
+
+**O que NÃO foi para o catálogo, de propósito:** comprar, descartar e
+embaralhar continuam funções do motor, entregues ao interpretador por
+`contexto()`. "Quando o baralho acaba, o descarte é embaralhado e vira o
+baralho" é regra do jogo, não de uma carta, e nenhuma carta deveria poder
+mudá-la. O sorteio também entra por ali (`ctx.sorte`) em vez de a ação chamar
+`Math.random()` — é o que permite rodar o motor com sorteio determinístico.
+
+A migração foi conferida com o comparador determinístico: o mesmo bot, com
+`Math.random` trocado por um LCG semeado, rodou 80 runs com **todas** as cartas
+equipadas nos dois motores, e o **estado final inteiro** (log, histórico,
+baralho, descarte) bateu byte a byte — com as cinco cartas especiais e o
+dobramento de advertência informal aparecendo o mesmo número de vezes nos dois.
+Faça o mesmo antes de dar por boa qualquer refatoração do motor.
+
+### A arte das cartas (v0.48)
+
+Foi o pedido do grupo que jogou: imagem na carta. A área de arte tem dois
+estilos, escolhidos por quem joga em Configurações › Aparência
+(`src/data/estiloDaArte.ts`, `useEstiloDaArte`): **rabisco** (o padrão) e
+**ícone** (o de sempre). A escolha mora em `clt-arte:v1`, com hífen de
+propósito: é do aparelho, e `limparLocalDoJogo` apaga o `clt:`.
+
+- **As imagens moram no CÓDIGO, pelo id da carta** (`src/data/artes/rabisco/<uuid>.webp`,
+  importadas por `src/data/artes/index.ts`, GERADO por
+  `node scripts/arte/indice.mjs`). É a exceção ao "cartas só no banco", e
+  é de propósito: imagem é asset, não balanceamento, e importada ela ganha
+  o `/clt` do Pages. Carta sem imagem (criada no `/lab` depois) mostra o
+  ícone, sem erro.
+- **Quem desenha é a API de imagens da OpenAI** (`scripts/arte/gerar.py`,
+  com `cenas.py` dizendo a cena de cada carta pelo NOME e `catalogo.json`
+  ligando nome e id). gpt-image-1.5, porque é o que gera com fundo
+  transparente. As regras do prompt são do autor: nenhum objeto com rosto
+  (a caneca cansada foi recusada), pessoa só como boneco de traço, sem
+  texto (no tamanho da mesa ninguém lê). A PNG crua fica em
+  `scripts/arte/bruto/` (fora do git) para refazer o recorte sem gastar
+  (`--refazer`). O limite da conta é 20 imagens por minuto: o script espera
+  e tenta de novo, e para na hora quando falta crédito. **Custa dinheiro do
+  autor: diga quanto antes de gerar em lote.** Uma rodada sem aviso gastou
+  US$ 5.
+- **O rabisco é MÁSCARA, não imagem**: o pós-processo recorta a margem
+  vazia, joga fora a cor e guarda só o alfa (com o traço engrossado, senão
+  some em 130 px). No `Card`, `.rabisco` pinta a máscara com
+  `--cor-raridade`, `--cor-tom` no evento e `--selo-comum` na comum: a cor
+  acompanha a raridade que estiver NO BANCO e o tema, sem gerar nada de novo.
+- **Com imagem, a arte mora no papel da carta** (`.comImagem`): o fundo
+  mais escuro e o fio embaixo da área de arte faziam papel dentro de papel.
+- **Testados e recusados pelo autor:** a COLAGEM de papelaria gerada por
+  IA (chegou a ser opção, saiu) e cenas com os AVATARES do editor num palco
+  5:4 maior que a área de arte, preso embaixo, para o chapéu não achatar
+  (funcionou; se voltar, é esse o caminho).
+- **As 74 têm rabisco** (48 de ação e 26 eventos). Carta nova: a linha
+  dela em `catalogo.json` e `cenas.py`, `python3 scripts/arte/gerar.py
+  rabisco` (o que existe é pulado) e o `indice.mjs`.
+
+### O versionamento do baralho
+
+Rebalancear é mexer em carta que já foi jogada. Sem cuidado, mudar a Hora Extra
+de 4 para 6 reescreve todas as partidas antigas — o replay passa a mostrar a
+carta de hoje no lugar da que a pessoa jogou —, e apagar uma carta deixa o
+replay sem nem nome para mostrar. A solução tem duas metades, que resolvem
+coisas diferentes:
+
+1. **O retrato, dentro da run.** `createRun` grava em `GameState.baralho` uma
+   cópia de cada carta equipada como ela era naquele dia, mais a versão do
+   baralho (`versaoDoBaralho()`, que vem de `public.baralho.versao`).
+   Sobe junto com a run (`runs.details.baralho`, e a versão também em
+   `runs.versao_baralho`) e é o que faz o replay continuar verdadeiro para
+   sempre, sem depender de nada externo. **É a única metade que não dá para
+   acrescentar depois**: run jogada antes disto existir nunca vai saber quanto
+   a carta custava — foi por isso que entrou antes de o balanceamento começar,
+   e não junto com ele. (Até a v0.14 a recompensa semanal entrava no
+   baralho no meio da run e era fotografada à parte; desde a v0.15 a
+   recompensa é do fim e vai para a coleção, então o retrato inicial basta.)
+2. **O histórico, escrito na hora.** Cada salvamento no `/lab` grava uma
+   linha em `cartas_antigas`, com `o_que` (o número) e `porque` (o motivo),
+   e a versão do baralho sobe sozinha. É o que o jogador lê
+   ao abrir uma carta no baralho (o histórico mora dentro do detalhe). Um diff automático saberia
+   dizer "custo 4 → 6" e não saberia dizer "porque Freela → Hora Extra fechava
+   a semana 1 sozinha", que é a parte que importa.
+
+**Ao ajustar uma carta:** é no `/lab`, e só lá; o salvamento pede o motivo
+e cuida do resto. Carta removida é `ativa = false`, e o último formato dela
+continua no catálogo — `cartaComoEra()` procura nessa ordem (retrato da run →
+baralho de hoje → removidas → rótulo honesto) e por isso nenhuma dessas
+mudanças derruba a página de ninguém.
+
+**Onde as cartas moram: SÓ no banco (v0.39).** Na tabela `cartas` (e
+`cartas_evento`), desde a v0.10. Até a v0.38 o código tinha uma cópia
+(`cards.ts`/`events.ts`) como semente e como rede, e ela era a fonte de
+confusão: andava atrás do balanceamento feito no `/lab`, uma vez passou por
+cima dele, e sem banco o jogo abria com números velhos sem avisar. Hoje:
+
+- O catálogo (`src/game/catalogo.ts`) nasce VAZIO. Quem o enche é a RPC
+  `catalogo`, e cada resposta fica guardada no navegador
+  (`clt:catalogo:v1`, em `src/data/cartas.ts`): com a rede fora, o jogo
+  abre com a última cópia que o banco mandou, que é o balanceamento de
+  verdade. Os modos vêm na mesma resposta e na mesma cópia.
+- Sem banco e sem cópia, ou com o catálogo sem baralho inicial ou sem
+  evento (`catalogoJogavel`), a guarda de sessão mostra "Não consegui
+  carregar as cartas", com "Tentar de novo" (`recarregarCatalogo`), em vez
+  de abrir a mesa. **O `/lab` passa assim mesmo:** num banco vazio é lá que
+  nascem as primeiras cartas.
+- Com a cópia (e não o banco ao vivo), o lab mostra o aviso e não grava
+  (`catalogoVeioDoBanco` é falso).
+- Não existe mais semear, "Trazer do código" nem "Copiar para levar ao
+  código", e `admin_semear_catalogo` saiu do `schema.sql` (fica só o
+  `drop`). **Carta e evento se mudam no `/lab`, e só lá.** Um banco zerado
+  pelo `reset.sql` começa sem carta nenhuma.
+- Quem serve as cartas para o resto do código continua sendo
+  `src/game/catalogo.ts`, e `getCard`/`getEvent` vêm de lá. O `MODO_NORMAL`
+  ficou no código (`regras.ts`): é o que vale com a tabela `modos` vazia, e
+  salvá-lo no `/lab/regras` cria a linha.
+
+**As três peças que tornaram o banco seguro**, e que precisam continuar
+valendo juntas (foi a ausência delas que adiou esta mudança por duas
+entregas):
+
+1. **Nada é apagado.** Remover é `ativa = false` mais uma linha em
+   `cartas_antigas`. A carta continua no catálogo, então quem está no meio de
+   uma run com ela na mão termina a partida; o que ela deixa de fazer é
+   entrar em baralho novo e sair como recompensa.
+2. **A run guarda o próprio retrato.** Mudar o custo hoje não reescreve a
+   partida de ontem.
+3. **Não dá para mudar em silêncio.** Todo salvamento grava uma linha em
+   `cartas_antigas`. O `o_que` ("Custo 4 → 6") é sugerido automaticamente
+   pela bancada, porque essa metade um diff sabe escrever; o `porque` é
+   digitado. **Desde a v0.47 o `porque` é OPCIONAL em tudo** — criar,
+   ajustar, remover e as regras do jogo (pedido do autor: o `o_que` já
+   registra a mudança); nenhuma função do banco o recusa mais.
+
+**Uma carta desconhecida não derruba mais nada.** `getCard` devolve uma carta
+inerte (custo 0, sem classe, sem efeito) e avisa no console, em vez de lançar.
+Com o catálogo no banco, id desconhecido deixou de ser impossível e virou
+raro — um save antigo, um `delete` na mão no SQL Editor —, e lançar ali
+levaria a mesa inteira junto.
+
+### Os modos de jogo
+
+Os números que não pertencem a carta nenhuma — aluguel, cota, meta da semana,
+salário, energia base, estresse de burnout — moravam soltos em `cards.ts`
+como `const`. Isso queria dizer que **mexer no aluguel era publicar o site**,
+que é exatamente o contrário do que balancear precisa ser.
+
+Hoje eles são um **modo de jogo**: uma linha na tabela `modos`, carregada
+junto com o catálogo, editável em `/lab/regras`. Existe só o `normal`; a
+estrutura já é uma tabela porque um dia pode haver um "difícil", e porque
+isso não custou nada a mais do que uma coluna custaria.
+
+**A run copia as regras quando começa** (`GameState.modo`) e o motor lê de
+lá, nunca da global. Duas consequências, e as duas são o ponto:
+
+- Mexer no aluguel às três da tarde não muda o preço de quem está no dia 12.
+  A partida termina com as regras que começou.
+- O replay de uma partida antiga continua batendo, pelo mesmo motivo que o
+  retrato do baralho existe: `runs.details.modo` guarda as regras daquele dia,
+  e `runs.modo` guarda o id, para não comparar no mesmo gráfico uma run de
+  aluguel 300 com uma de 380.
+
+Quem NÃO lê da run é quem não tem run: o tutorial (`ComoJogar`) e a bancada
+mostram as regras de hoje, porque explicam o jogo e não uma partida. Por isso
+`recursos()` e `derrotas()` lá viraram funções — um valor calculado no
+carregamento do módulo congelaria o número de ontem.
+
+**Cuidado com número de regra escrito dentro de carta.** O Dia Tranquilo era
+`HAND_SIZE + 2`, resolvido na hora de montar o arquivo; com a mão vindo do
+banco isso congelaria o 7 para sempre. Virou `{ faz: 'maoDoDia', quantas: 2,
+relativo: true }`. Qualquer carta nova que queira "a mais" ou "a menos" de
+uma regra precisa desse tipo de relativo, e não do total já somado.
+
+### A coleção conta cópias, e o baralho tem regras (v0.15)
+
+A coleção era `{ equipped, unequipped }`: binária. Cópia só existia para carta
+inicial (`card.copies`, lido em `createRun`), então tirar a Tarefa Simples
+tirava as quatro, toda desbloqueável existia uma vez só, e a recompensa morria
+quando as 13 desbloqueáveis acabavam. Hoje (`src/game/colecao.ts`):
+
+- `Collection = { tenho, baralhos, ativo }`: cópias possuídas por carta, até
+  `MAXIMO_DE_BARALHOS` (3) baralhos com nome, e qual está equipado.
+- **O teto de cópias é da raridade** (`COPIAS_POR_RARIDADE`, desde a v0.34
+  comum 5, incomum 4, rara 3, épica 2, lendária 1, a pedido do autor; eram
+  4/3/2/1/1), nunca abaixo das cópias iniciais da carta. É também o máximo
+  da carta num baralho, porque não se põe mais do que se tem. As contas de
+  "dias para completar a coleção" abaixo são de antes: as 152 cópias
+  viraram 198.
+- **Cinco raridades desde a v0.18**: comum, incomum, rara, `epica`, `lendaria`
+  (os ids sem acento moram na coluna; o nome é `NOMES_DE_RARIDADE`). Elas
+  foram ACRESCENTADAS em cima, e não renomeadas: trocar "incomum → rara, rara
+  → épica" deixaria o valor `rara` ambíguo no banco (é a rara antiga ou a
+  nova?), e a tradução na leitura não teria como saber. A raridade pinta só
+  a BORDA da carta e o SELO do tipo (`.comRaridade`, tokens
+  `--raridade-*` em `_tokens.sass`, com tons próprios e não os dos
+  medidores); comum não tem cor. **A borda é uma camada POR CIMA da face**
+  (`.face::after`, cor em `--cor-borda`), de 2px em TODA carta, e não a
+  `border` dela: com a borda de verdade, o selo e o custo ficavam dentro,
+  recortados pela curva de dentro do canto, e sobrava uma fresta de papel
+  de 1px entre a curva e o quadrado colorido. Por cima, a borda cobre a
+  emenda; o selo e o custo vão até a beirada, por baixo dela, e a face tem
+  `padding: 2px` no lugar da borda. O evento usa a mesma camada, na cor do
+  tom, e pinta o selo do tipo também. A caixa do texto da carta não tem borda (fazia borda
+  dupla com a da carta). Lendárias hoje: Automatizar e Pedir Aumento;
+  épicas: Café com o Chefe, Investimento, Grito no Travesseiro, Virar a
+  Noite e Plantão.
+- **`lerColecao()` traduz o formato antigo na LEITURA**, como `lerAvatar` e
+  `migrarAcoes`: inicial equipada vira as suas cópias, desbloqueável vira 1.
+  Ela roda no localStorage (`clt:collection:v2`, lendo a `v1` se a v2 não
+  existir) e no que vem do banco (`saves.collection` é lido cru). Sem migração.
+- **`garantirNaipes()` é rede, não regra.** O banco de produção ainda diz
+  Reunião ×2; com o mínimo de 3 por naipe, todo jogador abriria com um baralho
+  recusado. Ela completa cada naipe com cópias da carta inicial dele. Quando o
+  catálogo do banco tiver as cópias novas, ela para de ter o que fazer.
+- `createRun(cartas)` recebe UMA ENTRADA POR CÓPIA
+  (`cartasDoBaralho(baralhoAtivo(colecao))`). A troca foi conferida com o
+  `--hash` do simulador antes da troca da Reunião: idêntico.
+
+**As regras do baralho são do modo** (`baralhoMinimo` 15, `baralhoMaximo` 25,
+`minimoPorNaipe` 3, editáveis em `/lab/regras`). Carta sem naipe é livre: é
+coringa, não naipe. Quem confere é uma função só, `problemasDoBaralho()` em
+`src/game/baralho.ts`, que devolve os MOTIVOS em português: a página do
+baralho os lista, e a mesa os mostra num popup em vez de começar a run.
+
+**A recompensa saiu da sexta e foi para o fim da run** (v0.15). A semanal
+mexia no baralho no meio da partida — "como estou indo" misturado com "o que
+eu tenho" — e morria quando as desbloqueáveis acabavam. Hoje:
+
+- `restWeekend` vai direto para a segunda. A fase `recompensa` continua no
+  tipo só para o save gravado no meio dela, que `pularRecompensaSemanal` tira
+  de lá na abertura da mesa.
+- No recibo de fim, `opcoesDeRecompensa(colecao, semana, venceu)` sorteia
+  pela DISTÂNCIA (`raridadesDaRecompensa`: semana 1 só comuns, a rara só da
+  semana 4 em diante, quem vence escolhe entre 4). Só entra carta abaixo do
+  teto de cópias; a raridade esgotada cai para a de baixo; coleção cheia é
+  lista vazia e o recibo diz.
+- As opções são sorteadas na jogada que encerra a run e gravadas nela
+  (`rewardOptions`, `recompensaEscolhida`): recarregar não sorteia de novo.
+  `recompensaEscolhida` é OPCIONAL de propósito — campo obrigatório novo em
+  `GameState` obrigaria a subir a chave do save e descartaria as runs em
+  andamento.
+- A raridade é coluna da carta (`cartas.raridade`), dada às cartas antigas
+  UMA vez, no bloco `do $$` que cria a coluna — rodar o `schema.sql` de novo
+  não desfaz o que o admin escolheu depois no `/lab`.
+
+**Desde a v0.16 a carta do recibo também saiu: carta vem de ENVELOPE, e
+envelope vem de MISSÃO DIÁRIA** (`src/game/missoes.ts`). A do recibo amarrava
+a coleção ao número de partidas — largar cedo e recomeçar colecionava mais
+rápido do que jogar o mês —, e fazia do recibo de uma derrota uma vitrine.
+
+- **Quatro recompensas, todas na tabela `ENVELOPES` (números da v0.24):**
+  o envelope (`comum`, 1 a 3 cartas) vem de TODA partida terminada; o
+  pacote (`pardo`, 3 a 5) é da missão "Bater o ponto"; a maleta
+  (`confidencial`, 5 a 7, e 30% de chance de um item) é da "Fechar o mês"
+  (vencer); o cofre (`epico`, 7 a 9, um item garantido e 25% de um
+  segundo) é da missão dos SETE DIAS SEGUIDOS. Houve um cofre-forte
+  (`lendario`) acima dele, que missão nenhuma dava, e o autor o tirou na
+  v0.25: o cofre já é forte; `lerColecao` descarta o tipo que não existe. A
+  QUANTIDADE é sorteada antes, pelos `pesos` (25/45/30 no envelope,
+  30/45/25 nos outros), e a raridade de CADA carta depois, pelas `chances`
+  — pode vir uma carta só, e épica, ou três comuns. **Desde a v0.29 o
+  sorteio é entre TODAS as cartas do jogo**, e não só entre as que ainda
+  cabem: antes ele mirava justamente o que faltava, e a coleção se
+  completava sozinha. A raridade sem carta nenhuma no jogo cai para a de
+  baixo e, só então, para a de cima. Os ids `pardo`/`confidencial` ficaram os antigos porque
+  moram na coleção de quem já os ganhou. Simulado com o código de verdade
+  (`missoes.ts` e `tokens.ts` rodando fora do navegador): com o sorteio
+  entre todas, quem joga 1 partida por dia completa as 152 cópias das 48
+  cartas em ~56 dias só com recompensa, ~39 comprando na máquina; 2 por
+  dia, ~46 e ~31; 3 por dia, ~30 e ~24 (antes da v0.29 eram ~20, ~14 e
+  ~11). Carta nova estica isso mais do que qualquer número aqui.
+- **A sobra vira TOKEN (v0.29, `src/game/tokens.ts`).** Na abertura
+  (`abrirEnvelope`), a cópia acima do teto e o item que a pessoa já tem
+  valem `TOKENS_POR_RARIDADE` (comum 1 … lendária 5), somados em
+  `Collection.tokens`. A troca não é de um para um de propósito: a
+  máquina cobra `PRECO_NA_MAQUINA` (comum 10 … lendária 70), senão juntar
+  repetidas seria o atalho para completar a coleção. A abertura mostra a
+  repetida desvirando como as outras, e então ela esmaece e a ficha salta
+  por cima (`.virandoToken`, por TRANSIÇÃO de `filter`: trocar a
+  `animation` da carta apagaria a dela); na fileira e no resumo ela fica
+  apagada com a ficha em cima, e a soma vem embaixo. Quem chama a
+  abertura passa `emToken` (o que `abrirEnvelope` devolve).
+- **A máquina de vendas (`/maquina`).** `maquinaDeHoje` monta a vitrine
+  UMA vez por dia e a grava em `Collection.maquina` (`dia`, `cartas`,
+  `cosmeticos`, `vendidos`): recarregar não sorteia outra, e a vaga
+  comprada fica vazia até amanhã. Só entra o que a pessoa ainda pode ter.
+  `comprar` devolve a coleção nova ou o MOTIVO em português, que o visor
+  escreve. O desenho (gabinete, vitrine com molas, visor de cristal
+  líquido, boca) tem cores próprias e não as do tema, como a maleta e o
+  cofre. O saldo aparece ao lado do link na barra lateral, relido a cada
+  `saveCollection` pelo evento `EVENTO_COLECAO` em `window`.
+- **O ITEM (peça do avatar) é sorteado junto com as cartas, ao ganhar**
+  (`itens` em `ENVELOPES`: a chance de cada um, independentes;
+  `sortearCosmetico` em `cosmeticos.ts`), e mora em
+  `EnvelopeFechado.cosmeticos` até abrir. Desde a v0.29 pode vir peça
+  repetida (vira token), mas não duas iguais na mesma recompensa. Na abertura ele sobe
+  DEPOIS das cartas, vestido no avatar de quem abre (ou num sorteado, se
+  ainda é o manequim, que não veste nada), com o mesmo prêmio que desvira
+  da maleta do lab (`CosmeticoVirando`).
+- **Os sete dias seguidos** (`SEQUENCIA` em `missoes.ts`) não moram em
+  `MISSOES`: não renovam à meia-noite, atravessam a semana. Quem conta é
+  `Collection.sequencia` (`{ dia, dias }`, opcional: quem gravou antes
+  começa do zero): a primeira partida terminada do dia soma um, ou
+  recomeça do um se ontem ficou sem; no sétimo sai o cofre e a conta volta
+  a zero naquele dia. `sequenciaDeHoje` diz quantos valem hoje (zero se a
+  corrente quebrou). Abandono não conta, como nas outras missões.
+- **O conteúdo é sorteado ao GANHAR, não ao abrir (v0.20).**
+  `cumprirMissoes` sorteia as cartas e as guarda DENTRO do envelope
+  fechado (`EnvelopeFechado.cartas`), contra a coleção mais o que já está
+  nos outros envelopes fechados (senão dois prometeriam a mesma épica de
+  uma cópia só); as cópias só entram na coleção em `abrirEnvelope`. É o
+  que deixa o recibo e o replay dizerem o que a partida deu: a mesa grava
+  `GameState.envelopesGanhos` (opcional, sem subir a chave do save) na
+  jogada que encerra a run, ANTES do `registrarRunAgora`, e ele sobe em
+  `runs.details.envelopes`. A fila antiga, só de tipos, é lida como
+  `{ tipo }` e sorteada na abertura, como era. O `id` (`<runId>:<n>`) liga
+  o envelope do recibo ao da coleção: fechado na coleção de quem vê, o
+  recibo o mostra lacrado e deixa abrir; aberto, com as cartas ao lado.
+- `MISSOES` é uma tabela (como `CABELOS_FORMA`). Missão nova é uma linha; o
+  que ela pode perguntar é o que `FimDeRun` traz, não o `GameState` inteiro.
+- **Desde a v0.23 a recompensa é um OBJETO, numa escada em que o tamanho
+  diz o valor:** envelope (`comum`), pacote (`pardo`), maleta
+  (`confidencial`) e cofre (`epico`). É a `forma` em `ENVELOPES`, com o `artigo` para as
+  frases ("toque NA maleta"); os ids e o nome `envelope` no código ficaram
+  os de antes, porque moram na coleção de quem já os ganhou. O desenho é
+  `components/Recompensa`: SVG chapado,
+  montado em FACES planas projetadas por uma matriz oblíqua — a tampa abre
+  girando de verdade em volta da dobradiça (`useAndamento`, um laço de
+  quadros), e qual lado dela aparece é para onde a face aponta. Cada
+  desenho se divide em CAMADA de trás e da frente, e a abertura em tela
+  cheia põe a carta entre as duas: ela nasce dentro do objeto, atrás da
+  parede da frente, sobe e pula para a frente (`SAIDA` em `Envelope.tsx`
+  diz de onde, por objeto; o cofre abre de frente, então a carta já nasce
+  na frente, no meio da porta). Parado (missões, bandeja, recibo), é o
+  `ObjetoDaRecompensa`. O relógio do laço é o do PRÓPRIO quadro (o
+  `requestAnimationFrame`) desde o primeiro: misturar com
+  `performance.now()` dava passo negativo quando o navegador desacelerava
+  as animações, e a maleta dava uma cambalhota.
+- **A abertura RÁPIDA (v0.31):** segurar o objeto por 2 s (`SEGURAR_MS`,
+  com a barra enchendo) vai direto para o resumo com tudo de costas, e
+  desvira um por um a cada 160 ms, sem brilho nem entrada — só a ficha do
+  token salta. O toque que termina o "segurar" não abre de novo
+  (`segurou`), e o Esc no meio mostra tudo.
+- **A abóbora (`abobora`, v0.30) é a recompensa da TEMPORADA**: nenhuma
+  carta (desde a v0.31) e um item da coleção de Halloween garantido (`Envelope.tema`,
+  repassado a `sortearCosmetico`). Por enquanto só sai no `/lab/envelopes`:
+  nenhuma missão a dá. O desenho é chapado em gomos, a tampa (o topo
+  cortado em zigue-zague, com o cabo) sobe e tomba para o lado, o rosto
+  acende por dentro, e a carta sai do buraco de cima (com a polpa e a
+  parede de dentro desenhadas, e a tampa caindo no chão do lado, para não
+  bater na carta) — o buraco mora na
+  camada de trás, o corpo na da frente, recortado na linha da tampa.
+- **O popup das chances é RESUMO (v0.25, `ChancesDoEnvelope`):** de onde
+  vem, "De 5 a 7 cartas", "Chance de vir cosmético" (ou "Cosmético
+  garantido") e as cinco raridades numa barra só, com a legenda embaixo.
+  O peso de cada quantidade e a chance exata do item ficaram de fora a
+  pedido do autor: quem joga quer saber o que vem, e a tabela inteira
+  continua no `/lab/envelopes`.
+- **O envelope de antes (v0.16–v0.22) está no museu** (`EnvelopeAntigo`).
+  O que segue é a história dele. **Envelope, e não baú** (pedido do autor:
+  baú não combina). Era o MESMO
+  envelope em pé (`EnvelopeEmPe`, só CSS), e o que os distinguia era o SELO de
+  cera, na cor da raridade que dá nome ao envelope (o comum é cinza,
+  `--selo-comum`), e o ícone é um só para todos (a carta de baralho, v0.21):
+  cinco ícones eram cinco coisas para decorar, e a cor já dizia tudo. **A geometria é uma só:** as quatro dobras vão dos
+  cantos ao CENTRO, a aba é a dobra de cima (ponta no centro, no fundo do
+  V do bolso) e o selo fica nesse ponto; os cantos de cima são retos,
+  porque ali a aba continua o papel, e os de baixo também (canto
+  arredondado embaixo foi recusado pelo autor). **O selo é cera desenhada**
+  (`Cera`, SVG: borda em gotas, anel afundado, brilho) e é desenhado DUAS
+  vezes, cada cópia recortada numa metade com corte em zigue-zague: a de
+  cima mora num invólucro do tamanho da aba (`.seloAba`) que gira com ela
+  e some de costas (`backface-visibility`), a de baixo fica no bolso. Ao
+  abrir, a cera racha. A aba faz sombra no bolso (`.abaSombra`, o mesmo
+  triângulo mais baixo), que some ao abrir. A primeira versão tinha o X das
+  dobras, o V e a ponta da aba em três alturas diferentes. Clicar no envelope de uma missão abre
+  as chances (`ChancesDoEnvelope`); clicar num da bandeja "Para abrir" o
+  ABRE.
+- **A raridade da carta que sai do envelope fica EMBAIXO dela, solta**,
+  sem fundo nem borda (com sombra no texto, para ler em cima da aba), como
+  no resumo do fim. Era um selo escuro mordendo o pé da carta.
+- **A abertura é tela cheia, sem popup em volta** (`AberturaDeEnvelope`):
+  o envelope chega, espera o toque, a cera estala, a aba gira, e cada carta
+  sobe de DENTRO dele, virada, e desvira com o brilho da raridade (raios
+  em épica e lendária); o próximo toque a manda para a fileira do lado e
+  tira a seguinte; no fim, o resumo com todas. Duas regras seguram a
+  ilusão de a carta sair de dentro: o palco é desenhado em 360×560 e
+  ESCALADO (`--escala`, medido no JS), porque a animação é em pixels; e
+  nada entre a carta e o envelope pode criar contexto de empilhamento
+  (nem `transform` no invólucro durante a revelação, nem `perspective` no
+  envelope — a aba leva o `perspective()` no próprio transform), senão a
+  carta não consegue passar entre as costas e o bolso.
+- **Envelopes e missões moram na COLEÇÃO** (`Collection.envelopes`,
+  `Collection.missoes`): são coisa que se tem, e assim sobem em
+  `saves.collection` sem coluna nova. `lerColecao` os dá vazios a quem
+  gravou antes — sem migração.
+- A missão vira à meia-noite LOCAL (`hoje()`), não UTC: senão renovaria às
+  21h em Brasília. Quem confere é a mesa, na jogada que encerra a run, ANTES
+  do `sincronizar` — o envelope sobe junto. `cumprirMissoes` é idempotente
+  pelo `feitas`. Abandono não passa por ali e não conta.
+- Abrir o envelope muda a coleção ANTES da animação (`Envelope.tsx`): pular
+  ou fechar no meio não perde carta. Ele abre no início e no recibo de fim.
+- `recompensaEscolhida`/`rewardOptions` e `escolherRecompensa` ficaram só
+  para o save que terminou na v0.15 com a escolha pendente.
+
+**O preço disso, medido:** sem a recompensa semanal o bot mediano não tem mais
+como melhorar o baralho no meio do mês, e a vitória dele foi de 0,4% para 0%
+(burnout 100%, dia mediano 5). O jogo já estava duro demais; isto deixa a
+conta do rebalanceamento mais clara, não mais difícil de fazer.
+
+**A página do baralho (refeita na v0.33)** tem em cima o PAINEL do baralho
+equipado — os baralhos montados como abas de pasta, o nome com lápis e
+lixeira, a conta numa barra até o máximo (o mínimo é uma marca nela) e os
+naipes como selos com ícone, vermelhos abaixo do mínimo —, depois as
+ferramentas (busca, naipe em chips de ícone, raridade, ordem) e as cartas.
+No desktop, "No baralho" e "Coleção" são colunas lado a lado (é entre elas
+que se arrasta) e "Faltam" vem embaixo; no celular as três viram ABAS
+(`data-aba` nas colunas, e o CSS esconde as outras). Cada carta tem um
+CONTADOR embaixo (− n/total +), que move uma cópia sem gesto nenhum; o
+clique duplo e o arraste continuam movendo uma, e o clique simples abre o
+detalhe com o seletor de cópias e o histórico (`MudancasDaCarta`). Com o
+baralho no máximo, pôr mais uma é recusado. O "×2" da carta saiu daqui: o
+contador já diz.
+
+### Os custos além da energia (v0.15, lista desde a v0.17)
+
+A carta cobra energia em `cost` e o resto em `ActionCard.custos`, uma LISTA
+de `{ qual, quanto }` com `qual` entre dinheiro, estresse e produtividade
+(`src/game/custos.ts`). Era um campo por recurso (`custoDinheiro`, coluna
+`custo_dinheiro`), e a carta que custasse estresse pediria outro campo,
+outra coluna e outro `if` em cada tela. A energia ficou fora da lista de
+propósito: toda carta a tem, e os eventos mexem nela (`effectiveCost`). No
+`/lab/cartas` as duas aparecem na MESMA lista ("+ Custo"), e quem separa é
+o `EditorDeCustos`.
+
+- Custo é CUSTO, não efeito: `canPlay` recusa sem saldo de dinheiro ou de
+  produtividade (`custoQueFalta`), e `playCard` paga ANTES dos efeitos — a
+  carta que rende dinheiro não se paga com o próprio rendimento. Estresse
+  não tem saldo: pagar é subir, mesmo até o burnout.
+- Um efeito `recurso dinheiro −80` continua possível, mas deixa jogar no
+  vermelho e só cobra na sexta. O `/lab/cartas` acha essas cartas no
+  catálogo vivo ("Cartas que cobram dinheiro pelo efeito") e as converte,
+  tirando o "−R$" do texto.
+- Um carimbo por custo, com o ÍCONE e a cor do medidor do recurso (energia
+  é o raio, estresse o foguinho, dinheiro a cédula). Zero não é cobrança: a
+  carta sem custo nenhum não mostra carimbo nenhum (`.custos:empty`), e a
+  que só cobra outra coisa não mostra o "0" de energia. Custo mudado por
+  evento ganha uma SETA (↑ mais caro, ↓ mais barato) dentro do carimbo,
+  que continua na cor do recurso; o anel vermelho em volta do azul foi
+  recusado pelo autor. Quem calcula é `custosEfetivos(state, carta)`: a
+  ação `custo` ganhou `qual` (sem ele, ou `energia`, é o `costModifier` de
+  sempre; os outros somam em `GameState.modCustos`, que zera no
+  `startDay`), e a mesa passa o resultado ao `Card` pela prop `custos`.
+- **Não existe mais custo de ESTRESSE (v0.47, pedido do autor).** Ele era
+  o único custo que SOMA, e a mesma coisa aparecia de dois jeitos: "+2🔥" na
+  descrição de umas cartas e no carimbo de outras. Na leitura do banco
+  (`estresseViraEfeito` em `custos.ts`, chamada por `paraCarta` e pelo
+  simulador) ele vira o PRIMEIRO efeito da carta — no começo do primeiro
+  bloco sem condição que roda ao jogar, na ordem em que o custo era pago —,
+  e o editor só oferece energia, dinheiro e produtividade
+  (`CUSTOS_DE_CARTA`); salvar a carta grava o formato novo. O `RecursoDeCusto`
+  continua com `estresse` porque os retratos das runs antigas o têm. A ação
+  `custo` com `qual: 'estresse'` (o Chefe de Folga e a Pressão por
+  Resultado) passou a mexer no estresse que as CARTAS dão naquele dia
+  (`modCustos.estresse`, aplicado em `executarAcao` quando o `recurso` de
+  estresse é positivo e vem de carta; nunca vira alívio). Medido: a
+  conversão sozinha muda quase nada (`--tudo`, 400 runs, 9,5% → 9,0% de
+  vitória); com os eventos valendo para toda carta que dá estresse, 7,2%.
+  Se um dia voltar a existir carta que GASTA estresse, é só inverter.
+- **Tradução na LEITURA, nas três portas:** `custosDaLinha` (banco: coluna
+  `custos` se tiver algo, senão `custo_dinheiro`), `custosDe` (retrato de
+  run antiga, que guarda `custoDinheiro`) e `lerCustos` (soma repetidos,
+  descarta recurso desconhecido). `custo_dinheiro` continua sendo gravado
+  como espelho da parte em R$ — zero quando ela sai, senão a leitura a
+  ressuscitaria.
+- O retrato da run só ganha `custos` quando eles existem, para o retrato
+  das cartas de sempre continuar idêntico no `--hash` do simulador.
+
+### A carta neutra
+
+`ActionCard.kind` aceita `null`, e isso é a AUSÊNCIA de classe, não uma
+quinta classe. Duas consequências, e as duas são regra:
+
+- Nenhum evento de bloqueio a alcança — Sistema Fora do Ar não tem como
+  proibir "nenhum tipo".
+- Ela não entra no embalo, e jogar uma QUEBRA o embalo que estiver em pé.
+  Deixá-la atravessar em silêncio seria um combo escondido, que ninguém
+  leria na carta. É uma linha em `aplicarEmbalo` — se um dia a decisão for
+  outra, é lá que se muda.
+
+### O descarte é visível, e às vezes é escolha
+
+Duas coisas diferentes, que antes eram a mesma:
+
+- **`descartar`** tira carta sem perguntar (Fofoca de Corredor, Foco Total).
+  O que mudou é que agora a mesa MOSTRA: `GameState.ultimoDescarte` guarda o
+  lote e o motivo, e `DescarteNaMesa.tsx` desenha as cartas saindo. Antes a
+  mão só encolhia, e o único vestígio era uma linha no histórico que ninguém
+  lê no meio da jogada. O lote é anunciado de uma vez de propósito —
+  "descartou 2" é um acontecimento só. O descarte de fim de dia NÃO é
+  anunciado: o dia está acabando de qualquer jeito.
+- **`escolherDescarte`** para o dia e pergunta. Enquanto
+  `GameState.escolhaDeDescarte` existir, `canPlay` recusa tudo e `endDay`
+  não fecha o dia; `escolherParaDescartar()` é a resposta, e quando a conta
+  fecha o `entao` roda. É o `entao` que sustenta "descarte 1 para comprar 1"
+  sem uma ação nova para cada troca.
+
+**A mão em modo de escolha não embrulha a carta num `<div>`.** O leque
+posiciona os filhos DIRETOS a partir de `--carta-w`, que mora na própria
+carta; um invólucro no meio come a sobreposição e o arco. O rótulo
+"Descartar" é um `::after` com `pointer-events: none` — a carta inteira já é
+o alvo do clique.
+
+### A carta se monta em blocos
+
+O que uma carta faz era um `textarea` de JSON no `/lab`. Hoje é uma pilha de
+blocos: menu agrupado para acrescentar ação, setas para reordenar, e listas
+dentro de listas nos dois únicos pontos de aninhamento que a linguagem tem
+(`sorteio.entao/senao` e `escolherDescarte.entao`).
+
+**Isto NÃO é o Scratch, e é por isso que coube em dois arquivos.** O Scratch é
+caro porque tem expressão (bloco que devolve valor e encaixa dentro de outro),
+variável e uma tela 2D com física de encaixe. Aqui todo parâmetro é literal,
+não há variável, e o aninhamento é só aquele — então uma lista vertical cobre
+100% da linguagem. Canvas, encaixe por forma e arrastar não acrescentariam
+capacidade nenhuma, e ficaram de fora de propósito: as setas ↑ ↓ resolvem a
+ordem, que era o que o arraste faria.
+
+- `_catalogo/descritores.ts` diz, por ação, o rótulo em português e os campos
+  (número, porcentagem, escolha, texto, sim/não, id de carta, lista de ações).
+- `_catalogo/EditorDeAcoes.tsx` tem os cinco tipos de campo e a recursão, e
+  mais nada específico de ação nenhuma.
+
+**A armadilha que a tabela cria:** ela é uma segunda fonte da verdade ao lado
+da união `Acao`. O `satisfies Record<Acao['faz'], Descritor>` é o que faz o
+esquecimento virar erro de build em vez de silêncio.
+
+**O JSON não sumiu, ficou recolhido** (`EscapeJson`). Continua sendo o jeito de
+colar uma carta inteira de fora e de conferir o que o editor produziu; texto
+inválido não é aplicado, e o editor de cima segue com o último estado bom.
+
+### Embalo
+
+Cartas seguidas da **mesma classe** no mesmo dia rendem bônus crescente: a 2ª
+rende `+1` do recurso da classe (tarefa → produtividade, descanso → energia,
+grana → R$ 10, social → −1 estresse), a 3ª em diante rende o dobro. Jogar outra
+classe zera. Reinicia todo dia.
+
+Foi acrescentado porque, sem ele, **a ordem das jogadas era indiferente** — não
+havia motivo para jogar cartas em sequência específica. É o primeiro candidato a
+ajuste de balanceamento: o embalo de `grana` pode tornar Freela → Hora Extra
+forte demais na semana 1.
+
+### Evento revelado por clique
+
+No README o evento é virado e aplicado de uma vez. No código o motor separa
+"evento na mesa, virado para baixo" de "evento revelado": `revealEvent()` aplica
+o efeito **e só então compra a mão**. A ordem passou a ser acordar → virar evento
+→ comprar 5 cartas, que é a do README, mas com o jogador no controle do momento.
+
+### Sexta em três passos
+
+`paySalary` → `payBills` → `restWeekend`, cada um confirmado pelo jogador, em vez
+de resolver tudo num clique. Motivo: dava para chegar na segunda-feira sem ter
+visto quanto dinheiro entrou antes de sair.
+
+---
+
+## Decisões de interface
+
+O layout foi escolhido pelo autor a partir de um protótipo interativo com três
+opções. O que ele escolheu, e que deve ser preservado:
+
+- **Leque + carta estilo TCG.** Mão em leque sobreposto embaixo; carta com arte no
+  topo, custo numa aba no canto superior esquerdo, ícone do tipo só no canto
+  direito (sem rótulo de texto), e o resto da carta como área de texto.
+- **Mesa em tela cheia.** `100dvh`, sem rolagem no jogo. O tamanho da carta é
+  preso a `vh` (`--carta-h`) justamente para caber sem rolar. Essa regra de
+  "nenhuma página rola" é global (`html, body { overflow: hidden }` em
+  `global.sass`); a **única exceção é o baralho**, que cresce com o tamanho da
+  coleção — `.conteudo:has(:global(.page))` em `shell.module.sass` reabre
+  `overflow-y: auto` só quando a página renderizada carrega a classe global
+  `.page` (usada apenas por `/baralho`). Uma página nova que precise rolar
+  tem que ou usar essa mesma classe `.page`, ou ganhar sua própria exceção —
+  o padrão-fixo, hoje, é não rolar.
+- **Carta em 3D com verso.** Duas faces com `backface-visibility: hidden`,
+  girando em `rotateY`. Vale para mão, evento e pilhas. Cartas jogadas no tapete
+  ficam maiores e se empilham quando são muitas. **O verso é uma estampa dos 3
+  ícones da logo** (Coffee, Hammer, Droplet — Coffee, Labor and Tears), repetidos
+  numa grade com leve rotação alternada, sem nome nem texto nenhum.
+- **Interação da carta:** hover cresce e levanta · clique simples abre o detalhe
+  com o texto completo · clique duplo **ou** arraste até o tapete joga. Toda
+  carta ARRASTÁVEL (com `onPlay`) carrega o atributo `data-carta` — é o que a
+  barra lateral usa para não roubar o gesto de arrastar uma carta (veja
+  abaixo). Carta parada (bloqueada, histórico) não leva o atributo: ela não
+  tem gesto para proteger, e com ele o arraste da borda morria em cima dela.
+  **Só a carta que se arrasta prende o dedo** (`.arrastavel`, `touch-action:
+  none`); as outras são `manipulation`, e o dedo que encosta nelas rola a
+  lista em volta. Era `none` em toda carta, e a fileira do histórico só
+  andava se o dedo começasse FORA de uma carta. **Fora da mesa nada se
+  arrasta**, a não ser o baralho no computador (entre as duas colunas); no
+  celular as colunas são abas, não há onde soltar, e ele passa
+  `semArraste` (o clique duplo e o contador continuam movendo a cópia).
+- **Pegar a carta a endireita, e arrastar a inclina (v0.45).** No
+  arraste o giro do leque sai (`--leque: 0` em `.arrastando`; o `--rot` é
+  inline e nenhuma classe o venceria) e a carta tomba para o lado em que
+  vai, mais quanto mais rápido: a velocidade do ponteiro vira um ALVO de
+  inclinação (`--inclina`), e um laço de quadros persegue o alvo e o deixa
+  cair a zero quando o dedo para. Sem movimento reduzido, nada disso.
+- **A mão se reordena arrastando (v0.45, `reordenarMao`).** Soltou no
+  tapete, joga; soltou na faixa da mão, a carta muda de lugar, e enquanto
+  ela anda as outras abrem a vaga (`--abre`, pela propriedade `translate`,
+  que soma com o `transform` da animação de entrada). A ordem da mão não
+  vale nada para as regras: é só arrumação. A carta que não se pode jogar
+  agora (sem energia) também se arrasta, só não joga. **As cartas vão ao
+  DOM numa ordem FIXA (pelo uid) e a posição é o `order` do flex**: mover
+  o nó reiniciaria a `mao-entra` da carta. **A sobreposição precisa de
+  `z-index` pela posição** (`--camada`): o lugar da carta é posicionado, e
+  posicionado pinta pela ordem do DOM, não pelo `order`, no Safari — sem
+  ele, no iPhone, uma carta da esquerda tampava a da direita conforme o
+  uid sorteado (o Chromium segue o `order`, e o defeito não aparecia no
+  teste). Ao soltar, a carta sai do
+  ponto em que foi solta (`onSoltar` devolve quanto o lugar dela andou) e
+  só então desliza; a vaga fecha sem transição, no mesmo quadro em que a
+  carta muda de lugar.
+- **O crachá mora ao lado do evento (v0.46)**, e o tapete fica todo
+  para as cartas jogadas. No computador os três botões do canto ficam um
+  em cima do outro, da mesma largura (`--largura-dos-botoes`), e o crachá
+  vem do lado deles, da altura do evento (`--altura-evento`, que a carta de
+  evento também usa, e `--avatar-cracha`). No celular os botões voltam a
+  ser uma fileira de ícones, e o crachá cobre o canto embaixo deles até a
+  borda do evento. Elas vêm GRANDES e
+  só viram duas fileiras menores quando não cabem numa (`arranjoDasJogadas`
+  na mesa, pelo tamanho medido do tapete); a altura que era fixa deixava o
+  tapete quase vazio. Ganha o arranjo em que se vê MAIS de cada carta
+  (altura vezes o que a vizinha não tampa). **As jogadas moram FORA do
+  fluxo do tapete** (`position: absolute`): o tamanho delas sai do tapete
+  medido, e se elas o empurrassem, ele cresceria, elas cresceriam junto, e
+  no celular (onde a mesa tem altura livre) a mesa passava da tela até a
+  conta assentar. Clicar numa jogada abre o detalhe dela. O `:hover` que
+  põe a carta por cima das vizinhas (no leque e nas jogadas) é só de
+  mouse: no toque ele GRUDA na última carta tocada, e ela tampava as
+  outras. Reordenar a
+  mão mede os centros das cartas UMA vez, no começo do arraste: medidos a
+  cada movimento, eles pegavam as outras no meio da transição que abre a
+  vaga, e a mão tremia com o dedo entre duas cartas.
+- **Medidores compactos:** só ícone e valor (`⚡ 10`), com nome e explicação numa
+  dica que aparece no hover, no foco e no toque. No celular o dinheiro perde o
+  "R$" e os 6 medidores viram uma grade 3×2.
+- **Barra lateral recolhível** (`SideNav.tsx`): no desktop fica só com ícones e
+  cresce no hover; no celular fica escondida e **abre arrastando da esquerda
+  para a direita em qualquer ponto da tela** — o painel acompanha o dedo em
+  tempo real via uma variável CSS (`--arraste`, em px), e só assume a posição
+  final (aberto/fechado) ao soltar, conforme passou ou não da metade do
+  caminho. Fecha arrastando de volta pra esquerda, também de qualquer ponto. Um
+  arraste que começa em cima de uma carta (`[data-carta]`) é ignorado, porque a
+  carta já usa esse mesmo gesto para ser jogada — sem essa exclusão, jogar uma
+  carta no celular abriria o menu.
+  Recolhida ela tem 76 px e aberta 256 (v0.25: eram 62 e 216), com ícone
+  de 22 e texto de 16; a largura recolhida também mora em `.daMesa` do
+  `Dialogo`, e o avatar do Perfil é a largura da coluna (76 − 2 × 14).
+  **Todo ícone ocupa uma faixa de 48 px** (o link não tem respiro à
+  esquerda, e o primeiro filho leva 13 de cada lado), a largura do avatar
+  do Perfil: com o ícone de 22 e o avatar de 48, o "Perfil" começava 13 px
+  depois dos outros textos.
+  Muda de página fecha o gaveteiro sozinho. Os links vêm em dois grupos
+  separados por um fio — o JOGO (Início, Jogar, Baralho) e a GENTE (Ranking,
+  Comunidade) —, o "Jogar" ganha um ponto quando há run em andamento, e o
+  "Perfil" é desenhado com o avatar de quem está jogando. No fim da barra
+  ficam "Lab" (só admin), "Perfil", "Avisos" (o sininho, escondido para
+  convidado) e "Configurações".
+  **"Reiniciar run" e "Sair" saíram da barra (v0.14).** Reiniciar virou
+  "Pedir demissão", dentro da mesa, que é onde a vontade de desistir
+  aparece; Sair foi para as Configurações — na barra ele ficava a um
+  clique errado de distância, e estava repetido no fim do perfil. **Desde
+  a v0.38 as Configurações são um componente próprio**
+  (`components/Configuracoes`), em três abas (Som, Aparência, Conta; abre no Som), e o
+  Sair mora no RODAPÉ, ao lado do Fechar, fora das abas: quem abre a janela
+  para sair não procura em qual aba ele está. O estado (volumes, tema)
+  continua na barra lateral; o componente é só a tela. O tema se escolhe
+  por cartões com a mesa daquele tema desenhada (cores fixas de cada tema,
+  porque a prévia mostra o que NÃO está aplicado). Os dois
+  confirmam com o segundo clique (`BotaoConfirmar`, abaixo).
+  **Nada de barra inferior no celular** — foi proposta e recusada pelo
+  autor. A porta continua sendo o arraste, e o início tem tudo à mão.
+  **Sair com coisa por salvar avisa.** A barra pergunta a
+  `src/data/pendencias.ts` antes de navegar, e abre um `Dialogo` se a página
+  marcou pendência (hoje só o editor do avatar). Não existe "antes de sair
+  da rota" no App Router: é por isso que quem navega pergunta.
+  **O menu encolheu de propósito:** "Meus jogos" virou parte do perfil (o
+  seu e o dos outros), e Análise/Feedbacks/Novidades viraram abas de
+  `/comunidade` — eram três entradas para o mesmo assunto, "o que está
+  acontecendo com o jogo". "Como jogar" saiu daqui e foi para a mesa, no
+  canto oposto ao "Próximo dia": é lá que a dúvida aparece, e abrir o menu
+  no meio da partida é atravessar o jogo inteiro.
+  Enquanto houver popup aberto o arraste do menu é ignorado — veja `Dialogo`
+  abaixo.
+- **O tutorial é em PÁGINAS (v0.38)**: seis passos curtos (objetivo, a
+  carta, um dia, embalo, sexta, depois da partida) com Voltar/Próximo
+  embaixo, um traço por página em cima para pular, e as setas do teclado.
+  Era um popup comprido, e no celular a sexta e as derrotas ficavam lá
+  embaixo, onde ninguém chegava. A última página fala das recompensas, dos
+  tokens e da montagem do baralho, com os números das tabelas.
+- **O tutorial (`ComoJogar.tsx`) monta as cartas de verdade.** Ele renderiza o
+  componente `Card` com cartas tiradas do catálogo (`getCard`), e os números (energia
+  base, contas, estresse máximo) saem das constantes — rebalancear o jogo não
+  pode deixar o tutorial mentindo. As cores dos recursos são as mesmas do HUD:
+  o jogador reconhece o medidor pela cor antes de ler o nome, e o tutorial não
+  pode falar outra língua.
+- **Todo popup é o `Dialogo`** (`src/components/Dialogo/Dialogo.tsx`). Ele fecha ao
+  clicar fora e no Esc, e trava a página atrás marcando `data-popup` no
+  `<html>` (a regra que congela a rolagem está em `shell.module.sass`). Não
+  escreva popup novo à mão: os três que existiam antes erravam cada um uma
+  dessas coisas. `largo` só muda a largura.
+  - **Dois papéis, por assunto (`estilo`):** `nota` (nota fiscal: estreita,
+    fonte mono, serrilha por `mask`) para dinheiro e resultado — a sexta, a
+    recompensa, o fim de run —, e `prancheta` (padrão) para o resto. **A
+    prancheta é o papel de sempre do site** (borda fina, mesmo raio, mesma
+    sombra) com uma presilha pequena na cor da linha, e só. A primeira
+    versão, com borda grossa de papelão e presilha de metal, foi recusada
+    pelo autor por destoar da paleta — popup não pode chamar mais atenção
+    que a mesa. A serrilha é máscara, e máscara
+    corta a `box-shadow` do próprio elemento: por isso a sombra mora num
+    invólucro (`.moldura`) com `filter: drop-shadow`.
+  - **`semTravarNav`** é o popup da MESA: não marca `data-popup` e a cortina
+    começa depois da barra recolhida (`left: 62px`, `z-index` abaixo da
+    barra). Foi o que consertou o fim de run que prendia o jogador — antes o
+    painel cobria a barra e só "Nova run" tirava dali.
+  - **Sem `onFechar` não fecha** (nem X, nem fora, nem Esc): é a sexta e a
+    recompensa, que pedem decisão.
+  - **Entra e sai animado (v0.16).** A nota sobe de baixo da tela (papel
+    saindo da maquininha) e sai por cima (o recibo arrancado); a prancheta
+    só aparece e some. Fechar pelo X/fora/Esc anima e SÓ ENTÃO chama
+    `onFechar`. Fechar por fora (a sexta acabou, a run recomeçou) é
+    `aberto={false}` em vez de desmontar: o diálogo **congela o conteúdo**
+    do último render aberto enquanto sai, senão a nota sairia mostrando a
+    segunda-feira. `SAIDA_MS` no componente tem que bater com `.saindo` no
+    sass.
+- **Ação destrutiva confirma com o segundo clique** (`BotaoConfirmar.tsx`),
+  não com popup: o primeiro clique arma (texto troca, fica vermelho, treme),
+  o segundo executa, e ele desarma sozinho em 3 s ou quando perde o foco. O
+  estado armado vai para o leitor de tela por `aria-live`. Vale para Sair,
+  Pedir demissão, desfazer amizade e o "voltar" do editor com alteração.
+- **Avatar pequeno é a exceção, não a regra.** Abaixo de 33 px o `Avatar`
+  se aproxima da cabeça (`viewBox '8 0 84 84'`), e em 20–28 px os cortes
+  pareciam desalinhados entre si. Os tamanhos de lista subiram: barra lateral
+  30, relatos 32, amigos 44, ranking 52 (44 no celular, e redondo). Não volte
+  para menos que isso numa lista em que os rostos ficam lado a lado.
+- **O perfil é resumo.** Rank, a última partida e os selos das conquistas
+  (`<Conquistas selos />`) — o mesmo em `/perfil` e `/jogador`. As
+  conquistas inteiras abrem num `Dialogo`; as partidas inteiras são uma
+  PÁGINA (`/meus-jogos`), porque é lista para percorrer, filtrar e
+  ordenar, e popup é para olhar e fechar. Os dados da conta (nome, e-mail,
+  tipo, pontos, admin) foram para as Configurações: o perfil é a página que
+  os OUTROS veem.
+- **Uma partida acaba num RECIBO, e é o mesmo em todo lugar**
+  (`src/components/Recibo`): na mesa (dentro da nota do `Dialogo`), no
+  replay (`papel`, que desenha a nota em volta) e, resumido
+  (`ReciboResumido`), no perfil e em `/meus-jogos`. Eram três telas
+  contando o fim da mesma partida de três jeitos, e o replay nem contava o
+  que ela deu. Campo que a partida antiga não tem (estresse final,
+  envelopes) some do recibo em vez de virar uma linha mentindo zero. Os
+  botões do recibo da mesa: "Nova run" estica, e "ver o que aconteceu" e
+  "voltar ao início" são só o ícone — na nota estreita, os três com texto
+  quebravam em três linhas.
+- **Compartilhar o recibo é uma imagem desenhada no CANVAS**
+  (`Recibo/compartilhar.ts`, carregado só no clique), e não um print do
+  DOM: uma biblioteca de captura pesaria mais que o jogo, e o recibo é
+  texto em linhas. As cores são fixas (a do tema claro), porque quem
+  recebe não está no tema de ninguém; o avatar é o SVG do próprio recibo
+  (`[data-recibo-avatar]`), serializado, com o fundo lido do estilo
+  calculado — o fundo é CSS. A nota é desenhada duas vezes: a primeira só
+  mede a altura. No celular vai pelo `navigator.share` com arquivo; onde
+  ele não aceita arquivo, baixa o PNG e copia a frase. O link é sempre o
+  do jogo no ar (`ENDERECO_DO_JOGO`), mesmo compartilhando do localhost.
+  As recompensas vão numa FILEIRA de miniaturas, como no recibo resumido
+  (v0.36): o `DesenhoDaRecompensa` é montado numa caixa fora da página
+  (`createRoot` + `flushSync`) e serializado como o avatar — dá certo
+  porque as cores do desenho moram no SVG, e não no CSS. Cor nova num
+  desenho de recompensa tem que continuar no SVG, senão some da imagem.
+- **O replay mostra o avatar DA PARTIDA (v0.36).** A mesa grava
+  `GameState.avatar` (a receita crua, opcional) na jogada que encerra a
+  run, junto com os envelopes, e ele sobe em `runs.details.avatar`; o
+  replay e o recibo da mesa o leem por `lerAvatar`, e só a run gravada
+  antes disso cai no avatar de hoje. Quem jogou de chapéu e depois o tirou
+  continua de chapéu naquela partida.
+- **As recompensas não têm sombra no chão (v0.36):** o `Chao` dos desenhos
+  saiu a pedido do autor.
+- **`/lab/envelopes` abre recompensa NA CONTA do admin (v0.28).** Até
+  ali a coleção da página era uma cópia em memória; a pedido do autor, o
+  que sai agora entra na coleção de verdade (lida do banco, como no
+  início) e sobe por `sincronizar`. A de teste entra na frente da fila e
+  sai na hora: as recompensas fechadas que o admin já tinha continuam lá.
+  Para recomeçar, o "Resetar" da porta do lab. Embaixo, mil aberturas de
+  cada tipo com o que saiu DE FATO contra a tabela de chances — essas,
+  numa cópia, sem gravar nada; a queda para a raridade de baixo só
+  aparece ali.
+- **Cosméticos saem de MALETA (v0.22; no JOGO desde a v0.24, da maleta e
+  do cofre da escada — veja acima; as maletas de bronze, prata e ouro
+  ficaram só no código, sem bancada desde a v0.25).**
+  Envelope dá carta, maleta (bronze, prata, ouro) dá peça de avatar: são
+  duas vontades diferentes, e no mesmo pacote o óculos competiria com a
+  lendária pela mesma sorte. `src/game/cosmeticos.ts` é a tabela: um
+  cosmético é um VALOR de um campo da receita (`oculos: 'sol'`), o desenho
+  continua no `Avatar.tsx`, e peça fora da tabela é de todo mundo, como
+  sempre. O que a pessoa tem mora em `Collection.cosmeticos` (sobe em
+  `saves.collection`, lido vazio por quem gravou antes). Sem peça nova no
+  jogo inteiro, a maleta dá uma REPETIDA em vez de nada.
+  **No editor, peça trancada fica ESCONDIDA** (`Formas`): a entrada para
+  vê-las é a ÚLTIMA peça da grade da categoria ("ver não desbloqueados"),
+  não um botão em cima, e só existe na categoria que tem alguma. A peça já
+  vestida aparece sempre. **Desde a v0.29 tocar numa trancada a VESTE na
+  prévia** (com o cadeado), e o Salvar recusa com a mensagem de quais
+  peças ainda não são da pessoa. A cor trancada (fundo, roupa) fica à
+  vista nas amostras, com o cadeado no meio.
+  **Peça que veste o cosmético de outro campo (v0.31):** a cor da barba é
+  uma cor de cabelo e a das orelhas de gato uma de chapéu
+  (`CAMPO_DO_COSMETICO`, `cosmeticoDaPeca`): sem isso a barba abóbora era
+  de graça e sem a abóbora na amostra. O Salvar confere peça a peça da
+  receita. A trancada fica SEMPRE no fim da grade, mesmo vestida (ela
+  pulava para o meio das livres ao ser tocada). Para MOSTRAR um cosmético
+  (abertura, máquina), `vestirParaMostrar` veste também o que ele precisa
+  — a cor de chapéu num avatar sem chapéu não aparecia.
+  **Coleções sazonais (`Cosmetico.tema`)**: a de Halloween (v0.29) é o
+  chapéu de bruxa, os cílios longos, as quatro íris e as cores abóbora
+  (roupa e fundo) e noite (fundo). A peça dela leva a abóbora
+  (`AboboraIcon`, em `components/icons/Selos.tsx`) no canto de cima, no
+  editor, na máquina e na abertura. Os cílios são o campo `cilios`: três
+  fios no canto de fora, saindo do branco (`miolo`) ou, nas expressões com
+  pálpebra, da borda dela. O Sortear não dá peça trancada
+  (`avatarAleatorio(tenho)`). `salvar_avatar()` continua sem validar nada:
+  quem forçar um cosmético pelo console só enfeita o próprio avatar.
+  **A maleta é chapada, de couro liso, e só os FECHOS são de metal**
+  (tokens `--couro`, `--couro-escuro`, `--forro`). A primeira versão era
+  toda de metal, com degradê, plaqueta e tampa, e o autor a achou detalhada
+  e desconexa do resto, que é papel e cor lisa. Ela abre PELO MEIO, como
+  maleta em pé: duas metades iguais, e ao abrir a da frente alarga e baixa
+  e a de trás estreita e sobe (`scale` a partir da borda de baixo), e entre
+  elas aparece a faixa do forro. **Não é giro 3D de propósito:** de frente,
+  com o ponto de fuga na borda de baixo, a metade que vem para perto cresce
+  e tapa a outra, e a abertura não aparece (testado). A alça é da metade de
+  TRÁS — na da frente ela afundava no vão. Cada fecho tem duas peças: a
+  PRESILHA grande, que sai do topo e desce pela frente (fora das metades,
+  porque fechada passa por cima da frente e, aberta, sobe e troca o
+  `z-index` para ir para trás das costas), e o ENCAIXE pequeno, preso na
+  frente. O prêmio é uma carta de duas faces, como a do envelope: sobe
+  VIRADO e desvira lá em cima, e a luz vem depois (o brilho para todas, os
+  raios só para épica e lendária, a mesma regra das cartas). Dentro da
+  caixa vai o avatar inteiro; o nome, o ÍCONE da aba do editor onde a peça
+  mora (`Cosmetico.aba`; os ícones das abas moram em `components/icons`) e
+  a raridade ficam fora, embaixo. O prêmio sobe ENTRE as metades,
+  então nada no palco pode criar contexto de empilhamento: nem `filter` na
+  maleta (a sombra é `box-shadow` da frente).
+- **Carta que não dá para jogar fica ESCURA, não transparente**
+  (`.indisponivel`, `filter: brightness`): com opacidade, as cartas de trás
+  do leque apareciam através dela.
+- **A cortina atrás de popup e da gaveta é `--cortina`**, um preto
+  translúcido nos dois temas. Era `color-mix` com a `--tinta`, e no escuro
+  a tinta é CLARA: o fundo virava um véu branco.
+- **O avatar da mesa é um crachá no canto do tapete** (`.cracha`), 56 px no
+  celular e 72 no desktop, abaixo das cartas jogadas no `z-index`. Morava no
+  header com 24 px e no celular não dava para ver a cara mudar. A `key` pelo
+  humor remonta o crachá quando a cara troca, e é isso que dispara o balanço.
+- **HUD do celular:** header colado nas bordas, dia à esquerda e nick à
+  direita, "Próx. dia" ancorado abaixo do header, status de sync vira ícone
+  (girando / check / sem conexão) em vez de texto. Baralho e descarte somem da
+  mesa no celular (a carta jogada e a mão já ocupam o espaço). **A mão tem seu
+  próprio `--carta-h`** (`.zonaMao` no `@media (max-width: 760px)` de
+  `jogar.module.sass`, hoje `clamp(148px, 40vw, 192px)`) maior que o padrão da
+  mesa — é a carta que o jogador mais precisa ler no celular, e não deve
+  encolher só porque o resto da mesa encolheu.
+- **O dinheiro do jogo não é real: nada de "R$" na tela** (v0.17). É o
+  ícone da cédula e o número (`Dinheiro`, `src/components/Dinheiro`), o
+  mesmo ícone do medidor. O texto que vem de DADO — carta, evento, log,
+  changelog, histórico da carta — continua escrito "R$ N", que aqui é a
+  NOTAÇÃO, e `TextoComIcones` o desenha como ícone. Trocar no banco
+  obrigaria a reescrever toda carta e todo log de run antiga. Texto novo na
+  tela: `<Dinheiro valor={n} />`, nunca "R$". Onde só cabe string (aria,
+  title), `textoSemReais`.
+- **Paleta "papelada de escritório"** em `src/styles/_tokens.sass`: papel manila,
+  tinta de caneta, custo como carimbo.
+- **Tema com três estados**, em Configurações: claro, escuro e sistema.
+  `src/data/tema.ts` escreve `data-tema` no `<html>` e o CSS faz o resto —
+  nenhum componente conhece cor. "Sistema" é a **ausência** do atributo, que
+  é o que deixa o `prefers-color-scheme` mandar; por isso o bloco escuro
+  aparece duas vezes em `_tokens.sass` (uma no media query, excluindo
+  `[data-tema="claro"]`, e outra em `[data-tema="escuro"]`), via o mixin
+  `+escuras`. O tema é aplicado por um **script em linha no `<head>`**
+  (`SCRIPT_TEMA`): sem ele o site abre claro e pisca para escuro quando o
+  React monta — justamente no tema que a pessoa não quer ver.
+- **O avatar é uma receita, não uma imagem** (`src/components/Avatar/Avatar.tsx` +
+  `src/data/avatar.ts`). O que vai para o banco é um punhado de palavras
+  (rosto, pele, cabelo, cor, expressão, barba e a cor dela, tronco, roupa,
+  óculos, acessório e a cor dele, crachá, fundo) num `jsonb`; o SVG é montado na hora. Trocar de avatar é um `update` numa
+  linha, o desenho é nítido em qualquer tamanho, e não existe imagem imprópria
+  para moderar porque ninguém sobe imagem. Ele aparece no perfil, em
+  `/jogador`, na mesa (o crachá), no ranking, ao lado dos relatos e na lista
+  de amigos. O ranking e os relatos vieram na v0.14, com a decisão do autor de
+  estender `ranking()` a essa coluna (veja "Banco"). No perfil e em
+  `/jogador` ele é a CAPA da página (`AvatarHero`: faixa na cor do fundo,
+  figura saindo pela borda de baixo), e editar é o lápis no canto dela; o
+  editor põe a figura grande ao lado das opções, que são miniaturas e
+  amostras quadradas SEM nome escrito (o nome vai no `title` e no leitor de
+  tela). **No editor, o cabeçalho é preso no topo** (voltar, sortear só com o
+  ícone, Salvar à direita) e, no celular, a figura e as abas grudam embaixo
+  dele; `.editor` vira `display: block` ali porque item de grade só gruda
+  dentro da própria linha. A amostra "igual ao cabelo" da barba é um pente.
+  - **A receita não tem gênero (v0.13).** Era `corpo: homem | mulher`, e o
+    corpo decidia o rosto e a gola. O cadastro já tinha parado de perguntar
+    gênero na v0.8, por ser dado pessoal, e o editor continuava perguntando.
+    Hoje o primeiro campo é o FORMATO do rosto (`quadrado`, `redondo`, `oval`),
+    e o que lê como masculino ou feminino vem do cabelo e da barba.
+    `lerAvatar()` traduz a receita antiga na leitura (`homem → quadrado` +
+    gola V, `mulher → oval` + gola alta, olho novo para todo mundo) — sem
+    migração no banco.
+  - **A LATERAL do cabelo é escolha (v0.30, `lateral`: `cabelo`,
+    `degrade`, `nenhuma`)**, como o lado da barba. Na v0.30 ela era uma
+    peça à parte (duas faixas iguais por cima de todo corte), e não
+    encaixava: o canto quadrado da faixa saía do canto redondo do topo, e
+    no degradê o topo acabava num degrau antes de o fade começar. **Desde a
+    v0.31 cada corte desenha as PRÓPRIAS laterais**, como sempre fez, e a
+    escolha só muda a tinta (`DesenhoDeCabelo.lateral`): `capacete()` usa o
+    mesmo desenho cheio, em fade (gradiente vertical sem recorte, então o
+    volume acima da cabeça fica inteiro) ou sem os lados (`semLados`);
+    `rente()` faz o mesmo para os recortados pelo rosto (o curto, o
+    espetado); `faixas()` dá as laterais de quem não é capacete (os crespos,
+    o moicano), nascendo embaixo da franja. Os compridos, o careca, a
+    tigelinha e os repartidos não oferecem a escolha
+    (`semEscolhaDeLateral`). Sem lateral, a costeleta para na orelha. O antigo `degrade` virou o `curto` (o curto de
+    elipse solta saiu), e `lerAvatar` dá a cada receita antiga a lateral
+    que o corte dela já tinha (`LATERAL_ANTIGA`). Os cortes novos:
+    tigelinha, moicano (uma crista lisa), rabo (sai do alto da cabeça e cai
+    pelo lado), os repartidos curto, médio e longo (v0.31) — cosméticos, à
+    espera de o autor dizer quais viram de todo mundo; tirar de
+    `COSMETICOS` é o que libera — e, de Halloween, frankenstein (com os
+    parafusos no pescoço) e vampiro (o bico na testa). `FormaCabelo.alto`
+    é quanto o cabelo sobe acima da cabeça: chifres e orelhas de gato
+    pousam ali, POR CIMA dele (no flat-top eles afundavam).
+  - **A capa tem céu (v0.32, `comCeu`)**: o quadro do avatar se afasta
+    (`viewBox '-9 -18 118 118'`) e a faixa ficou mais alta, para o que passa
+    do alto da cabeça (chapéu de bruxa, orelhas, chifres, topete) caber
+    inteiro. A figura era 108% da faixa, cortando o alto de propósito.
+    Orelhas de gato na cor do cabelo são um tom abaixo dele: iguais, viravam
+    mais um calombo do cabelo.
+  - **Os olhos são desenhados ANTES do cabelo da frente (v0.30)**; a
+    sobrancelha continua por cima de tudo. Depois do cabelo, a pálpebra
+    (que é pele) e os cílios pintavam por cima da lateral nos rostos
+    estreitos.
+  - **O oval tem o tamanho dos outros (v0.30)**: era 20 de largura a
+    partir de 19, e a cabeça inteira lia menor. Hoje o que muda entre os
+    formatos é o canto, não o tamanho.
+  - **O avatar respira (v0.26, prop `vivo`)**, só onde é grande: a
+    `AvatarHero` e o crachá da mesa. É CSS puro no `Avatar.module.sass`: a
+    cabeça sobe meio ponto, o peito estica 1,5% a partir de baixo (o
+    bastante para o pescoço acompanhar o queixo), o olho pisca achatando em
+    volta do próprio centro, e a íris anda menos de 1 ponto para os lados.
+    Os grupos animados (`.cabeca`, `.peito`) ficam POR FORA dos de sempre,
+    porque a animação troca o `transform` e apagaria o `escalar`. O atraso
+    sai do `useId` (`--fase`), não de `Math.random()`, para o HTML do build
+    bater com o do navegador. O feliz e o X do burnout não piscam, e o
+    manequim não respira (é um boneco).
+  - **O olho de gato (v0.30) é a ÍRIS pontuda, na cor dos olhos, sem
+    pupila** — o jogo não tem pupila em olho nenhum. Engoliu o de réptil
+    (`lerAvatar` e `lerColecao` traduzem `reptil` → `gato`). A expressão
+    "Vitória" saiu da lista por ser a Feliz (continua como humor da mesa),
+    e o tronco "sem pescoço" (`colado`) também: a leitura dá a Feliz e a
+    camiseta a quem os tinha. Chapéu e chapéu de bruxa têm aba RETA (de
+    frente, aba é faixa; a elipse lia como chapéu visto de cima).
+  - **A cor dos olhos é livre, o FEITIO é colecionável (v0.27; de Halloween desde a v0.29).** Dois
+    campos: `corOlhos` (sete tons, `TONS_DOS_OLHOS`) e `iris` (`normal`,
+    `gato`, `reptil`, `preto`, `colorido`; as quatro diferentes são
+    cosméticos, `aba: 'olhos'`). Quem desenha é `miolo()`, o branco e a íris
+    no feitio da receita, e toda expressão com íris passa por ela — por
+    isso a íris nova vale para todas sem uma linha por expressão. Gato é a
+    íris com a fenda; réptil é o branco todo na cor clara e só a fenda;
+    preto e colorido são o olho inteiro de uma cor, sem íris, e por isso
+    não olham para os lados. O "De lado" também não olha (`olha = false`):
+    a íris dele já mora no canto, e andar a poria para fora do branco.
+  - **O avatar sente o estresse.** `humor` é uma camada por cima do rosto, não
+    peça da receita: `humorDoEstresse()` escolhe a cara em FRAÇÕES do estresse
+    máximo (olheira, suor, lágrima no 9, olhos em X no burnout). A mesa o
+    mostra no crachá e no recibo de fim; o início, com o humor da run salva; o perfil mostra sem humor. É o medidor de estresse com cara — a conta
+    `Energia = 10 − Estresse` só existia em texto antes dele. **O que se lê em
+    24px é a COR do fundo**, que esquenta com o estresse (`HUMORES.fundo`):
+    olheira e suor só aparecem do tamanho do perfil para cima. Em 32px ou
+    menos o `viewBox` se aproxima da cabeça.
+  - **Nenhum contorno, nem com contraste baixo.** Dez das 49 combinações de
+    cabelo e pele ficam abaixo de 1,35:1 (mel em canela é 1,01:1), e por um
+    tempo elas ganharam borda no rosto e um anel escuro no cabelo e na barba.
+    O autor recusou: o traço em volta destoava de um desenho todo chapado e
+    lia pior que a mancha que consertava. Não volte com contorno — se o
+    contraste for problema, a saída é a cor.
+  - **O fundo e a borda são CSS, não SVG.** Eram um `rect` dentro de um
+    `clipPath` e outro `rect` com `stroke` por cima; o stroke de um retângulo
+    colado na borda do viewBox é **cortado ao meio pela própria caixa**, e
+    saía uma linha irregular. Hoje quem faz fundo, canto e borda é o `<span>`
+    em volta (`Avatar.module.sass`), e com isso sumiu o `clipPath` — e o id
+    único que ele exigia. Regra geral: moldura é CSS, desenho é SVG.
+  - **O manequim é o padrão de quem não escolheu**: a figura de madeira sem
+    rosto. É o avatar de todo mundo que chega — convidado, Google ou e-mail —,
+    e ele diz "ainda não escolhi" sem fingir ser ninguém. Ele não veste óculos,
+    barba nem chapéu: seria fingir uma pessoa.
+  - **Chapéu de bruxa e orelhas de gato (v0.33).** O chapéu é um CONE
+    saindo direto da aba larga (a parte reta embaixo lia como cartola), e
+    corta a cabeça na aba (`ACESSORIOS.cortaCabeca`): o cone é mais
+    estreito que o rosto quadrado no alto, e os cantos apareciam. As
+    orelhas de gato são desenhadas ATRÁS de tudo (`atras: true`, camada 0),
+    com um pé que desce até dentro da cabeça: só a ponta passa do cabelo, e
+    o pé fica escondido em qualquer corte. Pousadas por cima, cada corte as
+    deixava num lugar. A altura em que saem é a do cabelo naquele ponto:
+    `FormaCabelo.alto`, ou `noLado` ([esquerda, direita]) quando o corte não
+    é simétrico ou o alto não está nas têmporas (topete, pompadour, rabo).
+  - **Refeitos na v0.38, a pedido do autor:** o MOICANO é a cabeça
+    raspada (a cor do cabelo a 24%, recortada pelo rosto) e uma crista
+    larga com três pontas baixas, sem escolha de lateral — a ponta fina de
+    antes lia como chifre —, e o `alto` dele é o das têmporas raspadas (0,5),
+    porque é ali que chifres e orelhas pousam. Os REPARTIDOS são um domo
+    liso com a risca em fio de pele (`topoLiso`, `riscaDoRepartido`), a
+    cortina em arco (∩, e não triângulo) afinando até sumir no lado do
+    rosto, e os lados acompanhando o rosto; o vinco fundo de dois gomos lia
+    como touca de coração. A TRANÇA é puxada para trás (como o rabo) e a
+    trança mora em `porCima` — peça nova da tabela, desenhada por cima da
+    roupa e igual com ou sem chapéu (no `atras`, o boné a trocava, e sobrava
+    a ponta solta no ombro) —, em gomos inclinados que se cruzam. As
+    TRANÇAS (box braids) viraram duas tranças finas por lado, RECORTADAS
+    pela forma do cabelo do momento: o zigue-zague de antes passava do
+    contorno em vários rostos e sumia embaixo do boné. Para isso a textura
+    recebe `comChapeu` e decide sozinha se aparece embaixo dele.
+  - **Os repartidos (v0.33), a versão de antes:** o alto em dois
+    gomos com vinco no meio, a testa num arco pontudo saindo da risca e as
+    cortinas cobrindo os cantos dela até os olhos (`topoDividido`,
+    `cortinaDe`, `costasDoRepartido`, `longoDividido`). O médio bate no
+    ombro com a ponta virada para fora. Vieram junto, da mesma leva, a
+    trança (uma só, caindo de trás da orelha por cima do ombro), o
+    pompadour e o mullet — cosméticos, como os outros novos.
+  - **O cabelo custou três tentativas** e está comentado no componente:
+    silhueta fechada ATRÁS do rosto (o miolo some debaixo dele, então não há
+    encaixe para errar), franja por cima com a borda de fora sendo um arco da
+    MESMA elipse da silhueta, e as mechas do comprido subindo acima da linha
+    do cabelo. Cada regra conserta um defeito que só apareceu no zoom: tiara,
+    corte reto na têmpora e faixa de pele. **O cabelo é de uma cor só de
+    propósito** — com dois tons, toda emenda entre as peças virava um
+    retângulo visível.
+  - **O rosto é paramétrico** (`MEDIDAS`), e a silhueta e a franja saem dos
+    mesmos números — é o que deixa o homem ser maior e de queixo reto sem
+    nada desencaixar. `cantoY`/`cantoX` são o raio do canto do rosto: iguais
+    a `larg`, o queixo vira ponta. Mexer nisso é o assunto do `/lab/avatar`.
+    São 17 números hoje: além do rosto e do cabelo, o pescoço (grossura e
+    quanto dele aparece), a borda do ombro, o tamanho da cabeça inteira
+    (`escalaCabeca`, ancorada no QUEIXO para não descolar do pescoço) e os
+    três multiplicadores de feição (nariz, sobrancelha, olho).
+  - **O corte de cabelo é uma TABELA, não um `if`** (`CABELOS_FORMA` em
+    `Avatar.tsx`). Era `longo ? silhueta : elipse`, o que fazia de todo corte
+    novo mais um ramo; hoje é uma linha, pela mesma razão que as cartas
+    viraram dado. `ACESSORIOS`, `OLHOS` e `TRONCOS` seguem o mesmo formato.
+    Cada linha diz o que vai ATRÁS do rosto e o que vai na FRENTE, e
+    `teste: true` marca a que o jogador ainda não alcança.
+  - **A CAIXA DO ROSTO é o esqueleto, e corte novo nasce dela.** Os dois
+    cortes antigos (`curto`, `longo`) saem de uma elipse SOLTA
+    (`rx`/`ry`/`cy`), sem relação com a cabeça — e as três consequências
+    apareceram juntas: eles cobrem a orelha, não cabem embaixo do boné e leem
+    todos como o mesmo cabelo comprido ("os cabelos parecem todos femininos").
+    Os cortes novos são desenhados a partir de `larg`/`topo`/`queixo`, os
+    mesmos números do rosto, e por isso o chapéu encaixa sem ajuste por corte.
+  - **A orelha é MEDIDA, não peça** (`orelha`, zero no jogo de hoje). É um
+    número só, e sendo medida ela some sozinha nos cortes mais largos que a
+    cabeça — quem esconde a orelha é o cabelo, não um `if`.
+  - **O degradê é o único corte que pinta a PELE**, e custou cinco versões:
+    duas elipses atrás do rosto (dois tons com a transição escondida), a testa
+    inteira em gradiente (o centro lia como mancha), faixas nas têmporas com
+    borda dura (liam como listras), e uma com coroa atrás da cabeça (fazia uma
+    borda redonda de volume em volta do topo — e degradê é o corte SEM volume).
+    A sexta esmaecia de LADO, e a pálpebra do "De lado" (pele por cima)
+    mostrou a mancha translúcida na têmpora. Hoje é o militar da referência:
+    topo pintado dentro do rosto, testa baixa de cantos redondos, e laterais
+    estreitas de cor CHEIA que só esmaecem para baixo, até a orelha
+    (`esmaecido`). O espetado usa o mesmo fade.
+  - **As laterais descem até a orelha e terminam afinando** (`capaceteDe`).
+    Todo corte curto acabava numa quina reta na altura da têmpora, e lia como
+    peruca. O capacete é uma peça só — capa, laterais e a linha do cabelo, que
+    é o que cada corte muda —, sem peça de trás. Ele também baixou a testa:
+    a linha do cabelo ficava em 0,1 da cabeça, e hoje fica entre 0,2 e 0,27.
+  - **O topo do cabelo é um só para trás e frente** (`capaDe`). Chanel e coque
+    tinham franja de cantos retos sobre silhueta redonda, e os cantos saíam por
+    cima como pontas. Corte novo que tenha franja usa `capaDe` dos dois lados.
+  - **Careca é sem cabelo nenhum.** Já foi "a coroa que sobra nas laterais",
+    e lia como dois tufos na orelha.
+  - **Do queixo para baixo, toda gola nasce de `pescocoLarg`.** As golas eram
+    números fixos (41 a 59, ±11) sobre um pescoço de ±6,5, e sobravam cunhas.
+    O pescoço é da cor da PELE, com a sombra só numa meia-lua debaixo do
+    queixo — na cor da sombra inteiro, ele ficava mais escuro que o colo do
+    decote. Ele é desenhado DEPOIS do tronco, e o que vai embaixo dele (o V
+    do jaleco, a camiseta do colete) ANTES: na ordem trocada sobrava um fio
+    de 1px atravessando o pescoço. As golas são recortadas pelo tronco
+    (`naRoupa`) — o decote do rosto oval subia acima do ombro. No "sem
+    pescoço" a sombra é o contorno do próprio rosto deslocado para baixo:
+    uma meia-lua de largura fixa lia como gola fora do lugar.
+  - **A boca dentro da barba cheia é da cor da barba, mais escura** (mais
+    clara na barba quase preta, onde não existe mais escuro). Era um recorte
+    de pele em elipse, que lia como máscara. A barba por fazer é a cor da
+    barba bem fraca, e só — o padrão de pontos lia como rede.
+  - **O boné é de frente**, como o da referência: copa com gomos e botão, e a
+    aba é uma FAIXA curva mais escura atravessando a testa. A aba de lado lia
+    como boné virado, e a meia-lua cheia, como uma segunda copa. Os `id` de gradiente, máscara, padrão e
+    recorte vêm todos de `useId()` **sem pontuação** (os dois-pontos não
+    sobrevivem a um `url(#...)`, e id repetido pinta todos os avatares da
+    página com a cor do primeiro).
+  - **Boné e chapéu apertam o cabelo.** Foram quatro regras: um `sobChapeu`
+    por corte brigando com a aba; o cabelo inteiro recortado da aba para
+    baixo (o volume continuava, como se o boné não apertasse); e o cabelo
+    sumindo inteiro (todo mundo parecia careca). Hoje embaixo da aba
+    (`ACESSORIOS.aba`) aparecem só as LATERAIS de cada corte, recortadas pelo
+    componente; os volumosos usam laterais de curto, e os compridos
+    (`FormaCabelo.sobChapeu.atras`) um comprimento rente à cabeça, caindo
+    atrás do pescoço. A aba do boné curva PARA CIMA — para baixo ela lia
+    como sorriso. A aba do chapéu fica em 0,22 da cabeça
+    porque mais baixa ela cobria a sobrancelha, que é metade da expressão.
+    A cor é escolha própria (`corChapeu`); "a da roupa" é o padrão de quem
+    gravou antes de ela existir.
+  - **Crespos têm a textura no CONTORNO** (`bordaCrespa`, `linhaRedondaDe`):
+    black power, puff e a linha de cabelo deles são bordas onduladas, porque é
+    a borda que aparece em 24px. Com a linha de cabelo lisa, o puff lia como
+    gorro.
+  - **Do queixo para baixo é uma peça só** (`TRONCOS`): pescoço, tronco e gola
+    se recortam, e gola desenhada sem saber onde o pescoço acabou deixa lascas
+    de pele nos cantos. O `padrao` é o único que olha o corpo — se um tronco de
+    teste virar o padrão, é ele que passa a dizer o que separa homem de
+    mulher, que hoje é a gola.
+    **Promover uma peça de teste não precisa de migração:** basta acrescentar
+    o valor ao tipo em `src/data/avatar.ts` e o rótulo na lista. É `lerAvatar()`
+    que valida, na leitura, caindo no padrão diante de peça desconhecida — e é
+    exatamente por isso que `salvar_avatar()` não valida nada.
+  - **Escolhe-se EXPRESSÃO, não olho.** O olho é sempre a amêndoa, e
+    a expressão é a pálpebra, a abertura e a sobrancelha
+    (`OLHOS[].sobrancelha`). O campo continua `olhos` e as chaves antigas
+    também (`emPe` é a "Decidida", `surpreso` a "Surpresa"); "Ponto" saiu, e
+    quem o tinha cai na amêndoa pela leitura. **Sem brilho na íris**: no
+    tamanho do perfil ele lia como o único reflexo de luz num desenho chapado.
+    **Cada expressão tem a sua boca** (`OLHOS[].boca`: curva, `'o'`,
+    `'torta'`, `'aberta'`) — a surpresa sorria. As caras do estresse
+    (cansada, suando, chorando, burnout, vitória) também são expressões
+    (`OLHOS[].humor`), para o PERFIL: na mesa, com `humor` dado, elas viram
+    a amêndoa e quem manda é o estresse, então a run começa tranquila. O
+    humor `tranquilo` não tem boca: vale a da expressão.
+  - **A barba encontra o cabelo como a pessoa escolher** (`ladoBarba`):
+    costeleta até o fim da lateral do cabelo (`fimDoLado`), costeleta
+    esmaecendo para cima, ou nada. Só as barbas `temLado` (as que cobrem a
+    mandíbula); bigode não tem lado. O bigodão `escondeBoca`: a boca nem é
+    desenhada. **A barba é desenhada ANTES do cabelo da frente, e a
+    costeleta sobe por baixo dele até a linha do cabelo, com a largura da
+    lateral do corte** (`FormaCabelo.lateral`). As duas peças encostando
+    uma na outra deixavam degrau, emenda e faixa de pele em centenas de
+    combinações; por baixo, o cabelo cobre o encontro e não há emenda para
+    errar. Corte novo com lateral declara a `lateral`; no careca a costeleta
+    para na orelha. A grade "Barba × cabelo" do `/lab/avatar` mostra a
+    têmpora de toda combinação.
+  - **O olho é FORMA, não detalhe.** A primeira tentativa foi realista —
+    branco, íris, pupila e um brilho — e ficou pior: em 24px o brilho some,
+    a pupila vira um ponto, e o rosto foge do estilo chapado do resto. O que
+    dá expressão aqui são três coisas, e nenhuma é detalhe: forma grande e
+    sólida (branco e íris, sem pupila e sem brilho), **inclinação espelhada**
+    entre os dois olhos — é o ângulo que diz curioso, desconfiado ou
+    surpreso —, e a íris **fora do centro**, encostada no lado do nariz, que
+    é o que faz o rosto olhar para quem vê. O `Feliz` é a prova: é o mais
+    expressivo dos cinco e o que tem menos desenho (dois arcos).
+    A pálpebra do "De lado" é um retângulo da COR DA PELE por cima do olho —
+    como ele mora dentro do rosto, o que sobra dela fora do olho é pele
+    também e some sozinho, sem precisar de recorte.
+  - **Acessório é a peça barata**, e cabelo é a cara: acessório vai solto por
+    cima de tudo, sem encaixe com o rosto nem com o cabelo para errar. Boné,
+    chapéu, óculos e barba são todos dessa família. Óculos e chapéu são
+    campos SEPARADOS da receita (um é do rosto, o outro da cabeça); o chapéu
+    tem cor própria, e os óculos têm armação escura fixa. O crachá passa POR
+    TRÁS do pescoço: o cordão sai dos lados da base dele, já sobre a roupa.
+    O brinco (`brinco`: nenhum, numa orelha — a da direita de quem olha — ou
+    nas duas; `corBrinco` dourado ou prateado) é uma argola no lobo,
+    desenhada ANTES do acessório: a concha do headset o esconde junto com a
+    orelha. Sem orelha (manequim, ou a medida `orelha` em zero), sem brinco.
+- **`/lab` é a oficina, e nenhuma bancada dela grava no jogo.** A trava é o
+  layout de `/lab` (`GuardaAdmin`), que pergunta ao banco — mas ela é
+  conveniência, não segurança: o código vai no mesmo bundle para todo mundo,
+  porque o site é estático. O que protege de verdade é o Postgres recusar as
+  ações de admin. Não ponha ali dentro nada que dependa de esconder.
+  Os atalhos de teste da porta (**desbloquear tudo**, **desbloquear os
+  cosméticos** — v0.38 —, **resetar**) e as
+  aberturas do `/lab/envelopes` são as exceções que mexem na conta de quem clica — e são de admin porque uma coleção
+  inteira desbloqueada estraga qualquer leitura de dificuldade que venha
+  daquela conta. **Eles moram SÓ aqui.** Estiveram no `/baralho` por um
+  tempo, ao alcance de qualquer jogador, que é justamente onde não podiam
+  estar.
+- **`/lab/regras` é a bancada do aluguel.** Os números do modo de jogo, com a
+  conta do mês se refazendo enquanto se digita (entra tanto de salário contra
+  tanto de contas) — porque a pergunta que se faz ali é sempre "isso ainda
+  fecha?". Salvar pede motivo como as cartas, e a tela diz na cara que quem
+  está jogando não é afetado.
+- **A mesa mostra o que aconteceu, e guarda.** A ação `mensagem` aparece num
+  balão no rodapé do tapete (`MensagemNaMesa.tsx`, mesmo mecanismo de `selo` +
+  timer do `DescarteNaMesa`, e num canto diferente porque o Foco Total dispara
+  os dois na mesma jogada). E o botão **Histórico**, ao lado do "Como jogar",
+  abre a run inteira agrupada por dia (`HistoricoDaRun.tsx`) — dia mais novo em
+  cima, com as CARTAS desenhadas (o evento, as jogadas numeradas na ordem, as
+  que sobraram na mão) e os números do `DayLog` numa fita de caixa; as frases
+  do `log` ficam recolhidas em "detalhes". A peça é `LinhaDoTempo.tsx`, a
+  MESMA do replay: as duas telas contavam a mesma história de jeitos
+  diferentes. As cartas saem do retrato da run (`cartaParaMostrar`), e o
+  `log` passou a subir em `runs.details.log` para o replay também tê-lo. Ele aparece em TODA fase, inclusive depois da derrota: é aí que se
+  quer ler o que aconteceu. Os dois botões do canto esquerdo vivem num
+  invólucro (`.cantoEsquerdo`) — com cada um preso em `left` por conta própria,
+  o segundo precisaria de uma conta à mão.
+- **`/lab/cartas` e `/lab/eventos` gravam no banco.** Até a v0.10 a bancada
+  era um rascunho que devolvia `cards.ts` para colar, e o motivo era bom: com
+  as cartas no código, um `delete` apagaria uma carta que está dentro do save
+  de alguém. O que mudou não foi a opinião, foram as três peças descritas em
+  "O versionamento do baralho" — sem elas, isto volta a ser perigoso.
+  A edição tem dois níveis de propósito: os quatro campos de recurso mexem no
+  bloco de efeito SEM condição (é o atalho de quem só quer rebalancear um
+  número), e o editor de blocos abaixo monta a carta inteira, condição e
+  sorteio inclusive — veja "A carta se monta em blocos".
+  **Salvar pede um motivo** (opcional em tudo desde a v0.47). O histórico de uma carta nasce no momento da
+  mudança, porque escrito depois ele não seria escrito.
+- **`/lab/avatar` (até a v0.25, hoje só no git) produzia código, não salvava nada.** O site é export estático:
+  não há servidor para escrever arquivo, então a bancada devolve a linha de
+  `MEDIDAS` para colar em `Avatar.tsx`. Ela desenha com o **mesmo** componente
+  do jogo (pela prop `ajustes`), nunca com uma cópia — laboratório que desenha
+  diferente do jogo mente sobre o resultado. A grade com todas as combinações
+  no rodapé existe porque é lá que o estrago aparece: ajuste que fica bom num
+  caso costuma abrir buraco em outro.
+  Os botões de pele saíram: quem manda na pele é o slot de cor, com hex livre
+  — dois controles para a mesma coisa é um deles mentindo.
+  **As peças marcadas com o frasco são de TESTE**, e essa marca é a informação
+  mais importante da tela: elas são desenhadas de verdade pelo componente do
+  jogo, mas o jogador não as alcança, porque a receita gravada no banco não
+  tem como pedi-las. Clique simples experimenta; **clique duplo abre a
+  confirmação**, que NÃO escreve código (não há servidor) — ela guarda a peça
+  numa lista, com os passos de código que faltam para promovê-la. Ver peça de
+  teste e achar que já está no jogo é o erro caro aqui, e é por isso que o
+  tracejado, o frasco e o aviso do topo dizem a mesma coisa três vezes.
+- **Escolha curta e excludente é o `Segmentado`** (`src/components/Segmentado/Segmentado.tsx`):
+  tema, abas de entrar/criar, gênero no cadastro, novos/todos nos avisos. O
+  fundo do selecionado é **um elemento só que desliza**, posicionado por
+  medição do botão ativo (`offsetLeft`/`offsetWidth`) e não por fração da
+  largura — as opções têm textos de tamanhos diferentes, e dividir o espaço
+  igualmente deixaria o retângulo fora do texto em metade dos casos.
+- **A música toca no site inteiro, baixinha fora da mesa.** Cortar de vez ao
+  sair de `/jogar` fazia o som entrar e sair a cada clique, o que é pior do
+  que os dois estados. `volumeDaMusica(v, naMesa)` multiplica por
+  `FATOR_FORA` fora da mesa, e a transição é uma rampa no GainNode — trocar
+  o ganho de uma vez estala. O efeito que dá `play()` **não** depende de
+  `naMesa`, senão trocar de página reiniciaria a trilha.
+- **Liga-e-desliga é `Interruptor`, resposta de formulário é `Check`**
+  (v0.38). O interruptor é para o ajuste que vale na hora do toque (o
+  mudo); a caixa de marcar, para "li e aceito". É um `button
+  role="switch"` com `aria-checked`, e a LINHA inteira é o alvo do toque.
+  **O interruptor e a barra de volume são UM desenho** (v0.38): o mesmo
+  trilho em pílula (`--trilho-desligado`, `--trilho-ligado`) e a mesma
+  cor. O `Slider` é a barra do iPhone: sem bolinha, segura-se a própria
+  barra em qualquer ponto e o valor anda o quanto o dedo andar (arraste
+  RELATIVO; tocar não pula o valor). O − e o + moram dentro dela, nas
+  pontas; a barra só captura o ponteiro depois de 4 px de movimento,
+  porque capturar na descida entregaria o clique à barra e o − e o +
+  deixariam de funcionar. O `Slider` tem `onChange` (cada passo do arraste) e
+  `onSoltar` (uma vez, ao soltar o dedo, num clique de −/+ ou ao subir a
+  tecla): o som de prova do volume de efeitos mora no `onSoltar` — no
+  `onChange`, arrastar virava uma metralhadora.
+- **Slider e checkbox são desenhados, não nativos** (`Slider.tsx`,
+  `Check.tsx`). O `input[type=range]` é irregular entre navegadores e no
+  celular disputa o gesto de arrastar com o menu; o slider daqui é uma trilha
+  com Pointer Events e captura do ponteiro, com botões de − e + dentro da própria barra (acertar 5%
+  arrastando num celular é loteria) e teclas de seta. O check mantém o
+  `input` nativo invisível — é ele que dá teclado, leitor de tela e rótulo
+  clicável de graça; `opacity: 0`, nunca `display: none`, senão ele perde o
+  foco.
+
+O detalhe da carta no clique **resolve o problema do texto longo** (a Reunião é o
+texto mais comprido do baralho): a carta corta e o texto inteiro vive no modal.
+Não encurte os textos das cartas no `/lab` por causa de espaço.
+
+**Sair (ou entrar como convidado) limpa o localStorage do jogo.**
+`limparLocalDoJogo()` (`storage.ts`) + `cancelarSync()` (`sync.ts`) rodam ao
+sair (nas Configurações e no "falta o nick" de `/auth`), e também ao entrar
+como convidado. Sem isso o save
+de um jogador vazava para o próximo que entrasse no mesmo navegador — o
+espelho local não sabe de quem é.
+
+---
+
+## Armadilhas conhecidas
+
+Todas já morderam neste projeto. Leia antes de mexer nas áreas correspondentes.
+
+**Um `switch` sem `default` transforma dado desconhecido em silêncio.** É a
+armadilha mais cara deste projeto, porque ela não deixa rastro: o
+interpretador de ações não tem ramo padrão, então uma ação cujo nome mudou não
+dá erro — ela simplesmente não acontece, e a carta parece quebrada sem que nada
+apareça no console. Toda mudança de vocabulário precisa da tradução na leitura
+(`migrarAcoes`), e o `satisfies Record<Acao['faz'], Descritor>` dos descritores
+é a outra metade da rede: ele quebra o BUILD quando falta o formulário.
+
+**Começar o dia passou a poder matar.** `startDay` sempre foi seguro: ele só
+somava energia e cota. Com a fila do `amanha` carregando ações quaisquer, o dia
+pode nascer com estresse ou advertência suficientes para acabar a run — por
+isso ele termina em `checkDefeat`. Qualquer coisa nova que rode ali precisa do
+mesmo cuidado.
+
+**Item flex não encolhe abaixo do próprio min-content.** O popup é um item
+flex centralizado pela cortina, com `width: min(100%, 560px)`. Isso NÃO
+impedia ele de ficar mais largo que a tela: bastava um filho com min-content
+grande (um `Segmentado` de cinco opções, um grid de `minmax(130px, 1fr)`) para
+a janela inteira passar de 390px no celular, e o `100%` não adiantava nada. O
+conserto é `min-width: 0` no painel — aí quem transborda é o conteúdo, e é ele
+que ganha um `overflow-x: auto` próprio (a tabela das semanas, a fileira de
+classes). Vale para qualquer caixa que seja item de um flex.
+
+**Tecla em `window` atravessa popup aninhado.** O `Dialogo` e a abertura
+do envelope ouvem `keydown` em `window`, e a abertura nasce de dentro do
+recibo: o Esc que pulava a animação fechava o recibo atrás dela. A abertura
+ouve na CAPTURA (`addEventListener(..., true)`) e para a propagação ali.
+Qualquer sobreposição nova que nasça de dentro de outra precisa do mesmo.
+
+**Navegação que falha mostra o arquivo de DADOS da página.** No export
+estático o roteador do Next busca `.../pagina/index.txt`; quando essa busca
+falha (a aba aberta numa versão velha do site, depois de um deploy, é o caso
+comum), ele recarrega a página — mas no endereço do `.txt`, e o navegador
+mostra o texto cru (`1:"$Sreact.fragment"…`). Mordeu ao sair da conta. É
+defeito do Next (o ramo do erro em `fetch-server-response.js` não tira o
+marcador, e a 15.5.27 ainda tem), remendado por `scripts/remendar-next.mjs`
+no `postinstall`. Ao subir o Next, rode `npm ci` e veja se o remendo avisa
+que não achou o trecho: ou o Next corrigiu (tire o remendo), ou mudou o
+arquivo (refaça). E sair da conta é recarga inteira (`location.replace`),
+não `router.replace`: sair é recomeçar o site, e assim nem passa por ali.
+
+**3D de CSS se achata em silêncio.** Os pacotes do museu (`/lab/museu`) são
+sólidos de verdade (`preserve-3d`, seis faces), e qualquer `overflow`,
+`filter`, `opacity` menor que 1, `clip-path` ou `mask` num elemento ENTRE a
+cena e as faces achata tudo de volta para o plano, sem erro. O que precisa
+de recorte (o rasgo do pacote) vai na própria face, que é folha; o fade do
+barbante é um `::after` dela. E a ordem do `transform` é a geometria: a
+tampa é `rotateX(90deg) translateZ(h/2) rotateY(φ)` — deitar, subir, e só
+então girar no eixo da dobra; trocando a ordem, gira no eixo errado.
+Toda face é `backface-visibility: hidden`, e o lado de dentro de um objeto
+aberto é um segundo cubo `interno` (as faces viradas para dentro, com a luz
+de quem olha pela boca: chão claro, teto e fundo escuros). Sem isso, olhando
+por dentro, o teto aparecia claro como o topo de fora — era o "sombreamento
+errado". A aba que abre é um invólucro com duas folhas, a de fora e o avesso.
+Duas faces que se encontram numa aresta deixam meio pixel de fresta, e o
+fundo vaza por ela ("os lados não encaixam"): cada face leva um `outline`
+de 1px na própria cor (`--fundo`, com `outline-offset: -.5px`), e por isso
+classe que troca a cor de uma face troca o `--fundo`, não o `background`.
+Objeto com paredes grossas (o cofre) é montado PAREDE a parede, cada uma um
+cubo, e a face de cada uma que olha para dentro leva a cor do interior.
+
+**Popup dentro da nota fiscal precisa de portal.** `mask` (a serrilha) e
+`filter` (o drop-shadow da moldura) também viram bloco contentor de
+`position: fixed`, como o `perspective` abaixo: o popup do envelope, aberto
+de dentro do recibo de fim, ficava preso no tamanho do recibo. `Missoes`
+monta o `Envelope` com `createPortal(…, document.body)`. Qualquer popup que
+nasça de dentro de outro precisa do mesmo.
+
+**Página que é a ÚNICA a importar um componente pelo `index.ts` pode sumir
+do build.** Com o início deixando de mostrar os amigos, o `/perfil` virou o
+único a importar `@/components/ListaDeAmigos`, e o Next 15.5 passou a falhar
+no pré-render com "Could not find the module …/perfil/page.tsx#default in
+the React Client Manifest" (a 15.5.27 também). Não é o `export *` nem o
+`'use client'` do índice — foi testado. Importar direto do arquivo
+(`@/components/ListaDeAmigos/ListaDeAmigos`) resolve, e é o que o perfil faz,
+com o comentário. Se o erro aparecer em outra página depois de um
+componente perder um importador, é isto.
+
+**`position: fixed` dentro de elemento com `perspective`.** Um elemento com
+`perspective` vira bloco contentor de descendentes fixos — `left/top` passam a
+ser relativos a ele, não à viewport. Como a carta precisa de `perspective` para o
+3D, arrastar com `position: fixed` jogava a carta longe do cursor. **A solução
+atual:** a carta anda por delta de `transform`; o JS informa só o deslocamento do
+ponteiro em `--ddx/--ddy` e o CSS compõe posição, levantada e escala. Não volte
+para posicionamento absoluto.
+
+**`getBoundingClientRect()` devolve a caixa já transformada.** No leque a carta é
+girada, então medir a carta para calcular o offset do arraste dá errado. Meça o
+slot (`.palco`), que não é transformado — ou, melhor, use delta puro.
+
+**Pseudo-elemento por cima da carta.** O contorno tracejado do slot vazio é um
+`::after` que pinta depois da carta e engolia o ponteiro mesmo com `opacity: 0`.
+Qualquer decoração sobreposta precisa de `pointer-events: none`.
+
+**Inline style ganha de `:hover`.** O levantar no hover não funcionava porque o
+componente escrevia `--ty` inline. Hoje o inline escreve `--lift` e o CSS compõe
+`--ty`. Cuidado ao adicionar variáveis novas na carta.
+
+**A mesa não pode abrir antes do catálogo.** `SessaoGuard` espera
+`catalogoPronto()` junto com `lerConta()` — em paralelo, então custa o tempo
+da mais lenta e não a soma. Começar uma run com o baralho de referência e
+terminá-la com o do banco seria trocar as cartas no meio do jogo. A home
+dispara a mesma promessa sem esperar (`CarregarCatalogo.tsx`), porque lá o
+tutorial só abre no clique e até então a resposta chegou.
+
+**Save de versão antiga derruba a página.** Quando `GameState` ganha campo novo,
+um save gravado pela versão anterior não o tem e a mesa quebra ao ler. Já
+aconteceu em produção. **A regra:** ao mudar o formato de `GameState`, incremente
+a chave em `storage.ts` e some o campo em `CAMPOS_DA_RUN`. A validação
+(`runUsavel`) roda tanto no save local quanto no que vem do banco.
+
+**URL do Supabase com caminho.** O painel mostra a URL do projeto num lugar e a
+"API URL" (terminada em `/rest/v1`) em outro. A `supabase-js` quer a primeira —
+passar a segunda gera `/rest/v1/rest/v1` e "Invalid path specified in request
+URL". O código normaliza, mas o valor certo é a URL do projeto pura.
+
+**Página de detalhe com "id" não pode ser rota dinâmica.** O site é export
+estático (`output: 'export'`), e `/meus-jogos/[id]` exigiria listar todo
+id de run possível em build time — inviável para IDs criados em produção. A
+saída é uma rota estática com o id por query string
+(`/meus-jogos/detalhe?id=<uuid da run>`), lida no cliente com `useSearchParams()`. Isso
+só funciona dentro de um `<Suspense>` — sem ele o build estático falha. Use
+esse padrão para qualquer página futura de "ver um item específico" que
+precise de export estático.
+
+**Ícone de "Adicionar à Tela de Início" no iPhone.** O iOS ignora o
+`icon.svg` e ignora os `icons` do manifest: ele só lê a tag
+`apple-touch-icon`, e só aceita **PNG opaco** (sem transparência, sem canto
+arredondado — a máscara é dele). É o `src/app/apple-icon.png`, 180×180, que
+o Next publica sozinho. Trocar só o `icon.svg` não muda o ícone do atalho.
+E cuidado com o basePath: o Next prefixa o `<link>` para o manifest, mas
+**não** prefixa o conteúdo de dentro dele — `start_url`, `scope` e `icons`
+em `src/app/manifest.ts` levam o `/clt` na mão, senão o atalho instalado
+abre na raiz do domínio.
+
+**Campo com fonte menor que 16px dá zoom no iPhone — e não desfaz.** O Safari
+do iOS dá zoom sozinho ao focar qualquer `input` com `font-size` abaixo de
+16px, e ao desfocar **não volta**: a página fica maior que a tela pelo resto
+da visita. Não existe jeito confiável de pedir o zoom-out por JS, e a saída
+comum (`maximum-scale=1`) é hostil a quem precisa ampliar. A regra é só ter
+fonte de 16px ou mais em campo de formulário — hoje `.campo` em
+`page.module.sass` e `.campo`/`.campoTexto` em `feedback.module.sass`.
+
+**`flex` com base em px num container que virou coluna.** `.campo` na home
+tinha `flex: 1 1 200px` de quando o formulário era uma linha. O formulário
+virou coluna (login, cadastro), e aquele `200px` deixou de ser largura e
+passou a ser **altura**: cada campo abria com 200px de alto e ainda crescia
+para preencher a sobra. Campo de formulário não leva `flex` com base em px —
+e, ao virar um flex container de linha para coluna, confira TODO `flex` dos
+filhos. Mesmo cuidado em `feedback.module.sass`, onde `.campoTexto` só recebe
+`flex: 1` dentro de `.responder`, que é a única linha de verdade.
+
+**No toque, `pointerenter` dispara junto com o clique.** A dica dos medidores
+abria com `onPointerEnter` e alternava no `onClick`. No dedo os dois eventos
+acontecem na mesma batida, em ordem que varia, e o resultado era a dica
+presa aberta para sempre. A regra: passar o mouse é do mouse
+(`e.pointerType === 'mouse'`), tocar é só o clique — e, no toque, é preciso
+fechar explicitamente (clique fora, Esc), porque não existe "tirar o mouse
+de cima".
+
+**Dica presa ao elemento é cortada nas pontas.** A mesma dica era
+`position: absolute` dentro do chip: nos medidores das bordas ela saía da
+tela, e no celular, com seis tijolos numa grade 3×2, "as bordas" é metade
+deles. Hoje ela é `position: fixed` e o componente calcula `left`/`top` a
+partir do `getBoundingClientRect()` do chip, limitando à janela e virando
+para cima quando não cabe embaixo. Vale para qualquer balão futuro: ou é
+fixed com limite, ou vai ser cortado em algum lugar.
+
+**Regra depois de `@media` ganha da regra dentro dele.** Com a mesma
+especificidade, quem vem por último na folha vence — estar dentro de uma
+media query não conta como mais específico. Regra base fica ANTES do
+`@media` que a sobrescreve; movida para baixo, ela apaga o comportamento do
+celular sem erro nenhum aparecer. (Mordeu no ranking antigo, de tabela.)
+
+**Run terminada não pode ser gravada por timer com debounce.** Foi bug em
+produção: o registro da run terminada morava no mesmo `setTimeout` de 900ms
+que sobe o save, e qualquer sincronização seguinte dava `clearTimeout`.
+Começar uma run nova logo depois de perder cancelava a gravação da derrota,
+que sumia sem erro nenhum na tela. Hoje `registrarRunAgora()` (`sync.ts`)
+grava na hora, fora do timer, e o que falhar entra numa fila em
+`clt:runs-pendentes:v1` que sobe na próxima abertura da mesa. Não pendure
+nada que só acontece uma vez naquele timer.
+E o erro do banco não pode mais ser engolido: `registrarRunAgora()` devolve
+o motivo, escreve `console.error` com a mensagem do PostgREST inteira
+(`message · details · hint · code`) e a mesa mostra essa mesma mensagem
+crua no painel de fim — no iPhone não há console para abrir sem um Mac por
+perto, então o erro tem que caber na tela. Foi por não ter nada disso que "joguei até o fim e não salvou" levou
+duas rodadas para ser diagnosticado.
+
+**`create policy` não tem "if not exists".** Rodar `schema.sql` de novo num
+banco que já o rodou antes (para pegar funções/colunas novas) falha em
+"policy ... already exists" na primeira `create policy` que encontrar,
+mesmo que todo o resto do arquivo seja `create or replace`/`if not exists`.
+A saída é um `drop policy if exists` logo antes de cada `create policy`.
+Qualquer política nova que entrar no arquivo precisa do mesmo par.
+
+**`create or replace function` não muda o tipo de retorno.** O irmão da
+armadilha acima: se uma função `returns table (...)` ganha coluna nova,
+rodar o arquivo num banco que já tem a versão antiga falha em "cannot
+change return type of existing function". Por isso `schema.sql` derruba
+todas as funções (`drop function if exists`, com a assinatura completa)
+num bloco só, antes de recriá-las. Função nova entra nesse bloco também —
+e o `grant execute` tem que vir depois do `create`, porque o drop leva o
+grant junto.
+
+**`src` de mídia não ganha o basePath.** O Next prefixa os links que ele
+mesmo gera, não o `src` de uma tag `<audio>`/`<img>` escrita à mão. O
+caminho do mp3 é montado no `(app)/layout.tsx`, que roda no servidor e
+enxerga `DEPLOY_TARGET` — mesmo remendo do manifest e do apple-touch-icon.
+Componente cliente não serve para isso: o Next só embute `process.env` no
+bundle do navegador para variáveis `NEXT_PUBLIC_`.
+
+**Áudio tocando a volume zero rouba o som do aparelho.** Mudo era ganho 0 com
+o elemento tocando — silencioso, mas ainda "tocando" para o sistema. Um
+elemento de mídia em reprodução toma o foco de áudio: no celular ele vira a
+faixa dos controles do aparelho e PAUSA o YouTube (ou o Spotify) que estava
+tocando. Do lado de quem usa, o som simplesmente trava sem motivo, porque o
+nosso já era zero. Volume zero tem que ser `pause()` no elemento mais
+`suspend()` no AudioContext, devolvendo o foco; sair do mudo volta a tocar
+sozinho. No mudo o contexto nem nasce, e a trilha de 3,7 MB nem é baixada.
+
+**Áudio não toca antes de o visitante interagir.** Chamar `play()` na
+montagem é recusado em silêncio numa aba recém-aberta. `Musica.tsx` tenta
+assim mesmo (quem chegou navegando por dentro do site traz a interação
+junto) e, se for recusado, espera o primeiro `pointerdown`/`keydown`/
+`touchstart`. Qualquer som novo precisa da mesma rede de proteção.
+
+**No iOS `audio.volume` é somente leitura.** Escrever nele não dá erro e não
+muda nada — no iPhone só os botões do aparelho mexem no som. Foi por isso
+que os controles de volume não funcionavam. A saída é passar o elemento por
+um `GainNode` da Web Audio (`createMediaElementSource` → gain → destination)
+e mexer no ganho; o iPhone respeita. `createMediaElementSource` só pode ser
+chamado **uma vez por elemento**, e o `AudioContext` precisa nascer depois
+de uma interação — daí a criação preguiçosa dentro do primeiro `play()`.
+
+**Gatilho em `auth.users` some se você derrubar a função dele.** O perfil
+nasce de `ao_criar_usuario`, um gatilho `after insert` em `auth.users` — uma
+tabela de OUTRO schema, que o `reset.sql` não apaga. Por isso o bloco de drop
+do `schema.sql` derruba o gatilho ANTES da função (`drop trigger ... on
+auth.users`): dropar só a função deixaria um gatilho quebrado, e todo cadastro
+novo passaria a falhar com erro do Postgres na cara de quem está se
+inscrevendo.
+
+**"Confirm email" ligado significa cadastro sem sessão.** Com a confirmação de
+e-mail ligada no painel (é o padrão), `signUp()` devolve `data.session === null`
+e insistir em entrar logo depois só dá erro. `cadastrar()` devolve
+`precisaConfirmar` justamente para a tela dizer "confira a caixa de entrada"
+em vez de fingir que deu certo. Para testar rápido, desligue a confirmação em
+Authentication > Providers > Email.
+
+**O endereço de volta do Google precisa estar na lista do Supabase.**
+`enderecoDeVolta()` (`conta.ts`) monta `<raiz>/auth/` — a raiz é o endereço
+atual sem o `auth/` do fim, com o `/clt` do GitHub Pages incluso, sem remontar
+basePath à mão. Só que o Supabase recusa qualquer redirect que não esteja em
+Authentication > URL Configuration > Redirect URLs, e o sintoma é voltar para
+o site errado, sem erro nenhum. **Desde a v0.14 a porta é `/auth`:**
+`localhost:3000/auth/` e `lx-xz.github.io/clt/auth/` precisam estar lá (além
+dos de `nova-senha/`). Mudar a rota da porta sem mexer na lista quebra o
+login do Google em silêncio.
+
+**Coluna nova e o cache do PostgREST.** A API que a `supabase-js` chama
+guarda o formato das tabelas em cache. Logo depois de um `alter table add
+column`, um insert com a coluna nova pode falhar com "column ... does not
+exist" mesmo com a coluna criada. `schema.sql` termina com
+`notify pgrst, 'reload schema';` por isso.
+
+**Gesto de arraste em `window` disputando com o arraste da carta.** A barra
+lateral no celular ouve `touchstart/touchmove` em `window` para abrir com
+arraste de qualquer ponto da tela. Sem cuidado, isso também dispara ao começar
+um arraste em cima de uma carta (que usa Pointer Events, não Touch Events, mas
+ambos os eventos disparam para o mesmo toque físico). A correção é checar
+`e.target.closest('[data-carta]')` no `touchstart` e ignorar o gesto inteiro
+quando ele começa numa carta. Qualquer novo elemento arrastável na mesa
+precisa do mesmo cuidado — ou herdar o atributo `data-carta`, ou a barra vai
+tentar abrir junto.
+
+**Uma regra CSS só pode ler `var()` de uma variável que ELA MESMA declarou,
+via cascata — não a variável de quem a chamou.** O painel da barra lateral usa
+um truque válido, mas fácil de "simplificar" por engano: a regra base
+(`.painel`) calcula `transform` a partir de `var(--arraste, 0px)`; a regra
+mais específica (`.nav.aberta .painel`) só redeclara `--arraste`, sem tocar em
+`transform`. Funciona porque `var()` resolve o valor cascateado da
+propriedade *no elemento*, não da regra que a declarou. Reescrever a regra
+`.aberta` para also declarar `transform: translateX(0)` direto quebraria o
+arraste ao vivo (o JS escreve `--arraste` inline durante o gesto, e essa
+declaração fixa ganharia por especificidade). O mesmo padrão já existia em
+`Card.module.sass` para `--lift`/`--ty`.
+
+---
+
+## Banco
+
+Esquema completo em [`supabase/schema.sql`](../supabase/schema.sql), para rodar no
+SQL Editor do projeto.
+
+| Tabela | Guarda |
+|---|---|
+| `players` | o perfil: nick, nome, e-mail, se é convidado, se é admin, pontos, avatar. **O site nunca lê esta tabela direto** |
+| `saves` | run em andamento e coleção, em `jsonb` |
+| `runs` | registro append-only de runs terminadas, para balanceamento. `versao_baralho` diz em que balanceamento a run foi jogada, e `details.baralho` guarda as cartas como eram naquele dia |
+| `feedbacks` | bugs e sugestões, com estado, urgência e nota |
+| `feedback_comentarios` | a conversa de cada relato |
+| `notificacoes` | o que aconteceu com o relato de cada um |
+| `cartas` · `cartas_evento` | o catálogo do jogo. `ativa = false` é carta removida, que continua existindo |
+| `cartas_antigas` | versões anteriores E cartas removidas, com `o_que` e `porque` de cada mudança |
+| `baralho` | uma linha só: a versão do baralho, que sobe a cada mudança de carta |
+| `modos` | os NÚMEROS do jogo: aluguel, cota, salário, energia base. Hoje só o `normal` |
+| `amizades` | um pedido por linha (`de`, `para`, `estado`). Recusar e desfazer apagam |
+| `conquistas` · `conquistas_do_jogador` | a lista (populada pelo próprio `schema.sql`) e quem ganhou o quê. `premio` é para os cosméticos de depois |
+
+Para apagar tudo e recomeçar do zero existe [`supabase/reset.sql`](../supabase/reset.sql)
+— ele derruba as tabelas **e as contas do Auth**, e não tem desfazer.
+
+### Contas
+
+Quem identifica o jogador é o **Supabase Auth**: e-mail e senha, ou Google. O
+`players.id` é o **mesmo id do `auth.users`**, e é isso que deixa
+`auth.uid() = player_id` funcionar direto nas políticas de `saves` e `runs`,
+sem tabela de ligação. O perfil nasce por um **gatilho em `auth.users`**
+(`ao_criar_usuario`), não pelo site: assim nunca existe conta sem perfil, nem
+que o navegador feche no meio do cadastro.
+
+Quem entra pelo Google chega **sem nick** (o Google não tem como saber um), e
+o mesmo acontece quando o nick é tomado entre a checagem na tela e o cadastro.
+Nos dois casos o perfil fica com `nick = null`, `lerConta()` devolve
+`{ tipo: 'incompleto' }` e a home pede o resto antes de deixar jogar. Nick nulo
+não colide com nick nulo no índice único, então isso não trava ninguém.
+
+**O convidado** não tem conta no Auth: `criar_convidado()` cria uma linha em
+`players` com `convidado = true` e um nick sorteado (`convidado-a3f2`), e a
+identidade mora no localStorage deste navegador. Ele joga tudo, e as partidas
+dele são gravadas com `runs.convidado = true` — mas não relata bug (não há
+como responder a ninguém) e perde o progresso ao sair, o que a tela avisa
+antes, no perfil, e na página de feedbacks.
+
+**Entrar pelo nick (v0.38).** O campo de entrar aceita e-mail OU nick: sem
+arroba, `entrar()` pede ao banco o e-mail daquele nick por
+`email_para_entrar(nick, senha)`, que **confere a senha antes** (contra o
+hash do próprio Auth, com o `crypt` do pgcrypto) e só então devolve o
+e-mail — devolver o e-mail de qualquer nick entregaria o e-mail de todo
+mundo, o que a seção de segurança proíbe. Nick inexistente, senha errada e
+conta sem senha devolvem o mesmo nulo. Como é tentar senha fora do limite
+do Auth, ela tem o próprio: 10 por nick a cada 15 minutos
+(`tentativas_de_entrada`, sem política nem grant). **Errar não leva mais ao
+cadastro:** antes, "e-mail ou senha não conferem" abria a aba Criar conta,
+e quem tinha conta e só errou a senha ia tentar criar outra. Hoje fica em
+Entrar, com o recado de que a criação é na outra aba.
+
+**Várias contas no mesmo aparelho (v0.39, `src/data/contasSalvas.ts`),
+como no YouTube.** O Supabase guarda UMA sessão; cada conta que entra
+deixa a própria (o par de tokens) numa lista em `clt-contas:v1` — com
+hífen, e não `clt:`, DE PROPÓSITO: `limparLocalDoJogo` apaga o que começa
+com `clt:` a cada troca, e a lista tem que sobreviver. Trocar é devolver a
+sessão guardada ao Supabase (`setSession`; com o acesso vencido ele renova
+pelo token de renovação), e **nunca `signOut`**, que revogaria a sessão de
+quem está saindo. O token de renovação gira a cada uso, então a conta EM USO
+regrava os dela em toda mudança de sessão (o ouvinte no fim do arquivo); a
+sessão guardada que morrer (senha trocada, revogada) deixa a conta na lista
+com "entrar de novo".
+- `lerConta` lembra a conta completa (nick e avatar de hoje) a cada leitura.
+- Antes de outra conta entrar, `prepararTroca` sobe o save que esperava o
+  timer (`descarregarSync`, novo em `sync.ts`) e as partidas da fila, e
+  RECUSA se uma partida terminada não subiu: a fila é do aparelho, e
+  limpá-la para a próxima conta a perderia. Depois, `concluirTroca` limpa o
+  espelho local e o site recomeça (`recomecarSite`, recarga inteira).
+- A porta (`/auth`) mostra os perfis (`components/ListaDeContas`) quando há
+  conta guardada e ninguém entrou; "Editar" põe o Sair em cada uma (só
+  deste aparelho: esquece a sessão guardada, não desloga em outro lugar).
+  `/auth?adicionar` é entrar com OUTRA conta sem sair: a porta não manda o
+  logado de volta ao início, e entrar, cadastrar ou o Google passam pela
+  mesma troca. O convidado não entra na lista (não tem sessão).
+- Configurações › Conta tem a mesma lista, para trocar sem sair.
+- **Sair é só deste aparelho** (`signOut({ scope: 'local' })`): o padrão
+  do Supabase desconectava a pessoa de todo lugar.
+
+**Presentes do admin (v0.40, `src/data/presentes.ts`).** O admin dá uma
+carta a um jogador pelo `/lab` (seção Presente: nick, carta e recado), e
+ela aparece no INÍCIO de quem recebe (`components/Presentes`): um aviso com
+o recado e "Abrir", que vira um envelope com a abertura de sempre (a cópia
+acima do teto vira token, como qualquer outra). A tabela `presentes` é só
+o RECADO, sem política nem grant: `admin_enviar_presente` recusa quem não é
+admin e convidado (que não tem `auth.uid()` para receber), e
+`receber_presente` devolve verdadeiro UMA vez por presente — o site marca
+como recebido ANTES de pôr a carta na coleção, e é isso que impede duas
+abas de darem a mesma carta duas vezes. O aviso só abre depois de a coleção
+vir do banco (`doBanco` no início), senão subiria a coleção velha do
+espelho local por cima. Por enquanto só no início: quem está na mesa vê
+na próxima visita a ele.
+
+**Trocar (ou criar) a senha mora em Configurações › Conta** (v0.38,
+`TrocarSenha`). Para quem entra pelo Google ela é "Criar senha": com ela a
+conta passa a entrar também por e-mail ou nick, e quem perder o Google não
+perde a conta. O palpite de "tem senha" vem dos provedores do Auth
+(`contaTemSenha`); a ação é a mesma (`updateUser`). Se o projeto exigir
+login recente para trocar senha, o erro diz para sair e entrar de novo.
+
+**Admin se dá no SQL Editor**, com o e-mail na mão
+(`update public.players set admin = true where email = '...'`), depois de a
+conta existir. Não há tela para promover ninguém, de propósito.
+
+**Perfil de outra pessoa mostra só o que já era público.** `perfil_publico()`
+e `jogos_do_jogador()` devolvem nick, avatar, placar e partidas — o mesmo que
+o ranking já mostrava, mais o desenho. Nome, e-mail e pontos **não passam por
+lá**: quem devolve esses é `meu_perfil()`, filtrado por `auth.uid()`. A
+decisão de o que é público mora na função do banco, não na tela.
+
+**A urgência tem duas línguas, e uma coluna só.** "Urgência crítica" não quer
+dizer nada numa sugestão — sugestão não é urgente, ela entra antes ou depois.
+Os quatro valores no Postgres continuam `baixa/media/alta/critica`; o que muda
+é o rótulo, conforme o tipo do relato (`escalaDe()` em `src/data/feedback.ts`):
+bug fala em gravidade (Cosmético → Quebra o jogo), ideia fala em quando entra
+(Algum dia → Entra já). Não crie coluna nova para isso.
+
+**`salvar_avatar()` não valida o conteúdo, e é de propósito.** Quem valida é
+`lerAvatar()` no site, na LEITURA: peça desconhecida cai no padrão (o
+manequim). Assim acrescentar um cabelo novo não exige mexer no banco, e um
+avatar gravado por uma versão antiga nunca derruba a página de ninguém. O
+convidado não passa por aqui — o avatar dele mora no localStorage, junto com
+o resto dele.
+
+**O cadastro não escolhe avatar (desde a v0.8).** Ele perguntava o gênero
+para sortear um desenho, e isso era pedir um dado pessoal para enfeitar a
+tela. Hoje todo mundo nasce manequim. O gatilho `ao_criar_usuario` ainda lê
+`raw_user_meta_data -> 'avatar'`, que o site não manda mais — o valor é nulo
+e `lerAvatar()` o transforma no manequim. `avatarAleatorio()` é o botão
+Sortear do editor.
+
+**Comentário de admin faz a triagem sozinho.** `comentar_feedback()` move o
+relato de `novo` para `triado` quando quem comenta é admin: responder já é ter
+lido, e deixar o relato dizendo "ainda não foi lido com calma" depois de uma
+resposta é mentira na cara do autor.
+
+O `id` de `runs` é o uuid gerado com `crypto.randomUUID()` na criação da
+run, em `createRun()` (até a v0.34 era um número do banco, e esse uuid
+morava ao lado, em `run_id`), e `details` (`jsonb`) guarda o dia-a-dia da
+partida (`GameState.history`, ver `src/game/types.ts` — `DayLog`).
+`enviarRun()` (`src/data/saves.ts`) grava com um `insert` cru e trata `23505`
+(unique_violation) como sucesso: se a mesma run for enviada duas vezes (duas
+abas, uma retentativa depois de a resposta se perder), a segunda esbarra na
+chave primária e isso é exatamente o resultado desejado. **Não troque por
+`upsert`** — foi o que estava aqui e quebrou em produção: o upsert vira
+`on conflict do nothing`, e o Postgres cobra SELECT na tabela por causa da
+cláusula `on conflict`, então toda gravação voltava com `permission denied
+for table runs · GRANT SELECT ON public.runs TO anon · 42501`. Seguir a dica
+da mensagem daria leitura da telemetria de todo mundo para o `anon`, que é
+justamente o que a seção de segurança abaixo proíbe.
+
+`runs` tem ainda `started_at`, `max_combo`, `cards_played`, `warnings` (o que
+o histórico não deduz sozinho) e `visivel`. **`visivel = false` é a run largada
+no meio sem permissão do jogador:** ao reiniciar, o menu pergunta se quer
+guardar; dizendo não, a run é gravada assim mesmo, com `outcome = 'abandono'`,
+mas fora de `meus_jogos()`, `ranking()` e `jogo_detalhe()` — quantas runs são
+largadas, e em que dia, é dado de balanceamento. `'abandono'` é o quinto valor
+do check de `outcome` e **não conta** como derrota em lugar nenhum. **Só é
+gravado do dia 3 em diante:** reiniciar no primeiro minuto é "ainda estou
+escolhendo o baralho", não desistência.
+
+As estatísticas de carta saem todas de `details`, que já guarda as cartas de
+cada dia na ordem jogada: `cartas_jogadas()`, `cartas_fatais()` (a última carta
+antes de a run acabar mal, via índice `-1` do jsonb), `escolhas_de_evento()`,
+`estresse_por_dia()` e `estatisticas_nerds()`. Nenhuma delas precisou de
+contador novo no motor — antes de criar campo em `GameState` para uma
+estatística, veja se ela não sai do histórico.
+
+Decisões de segurança que não devem ser desfeitas:
+
+- **`players` não tem política nenhuma.** Com o RLS ligado e zero políticas, a
+  tabela é invisível para o site: o que se sabe do próprio perfil vem de
+  `meu_perfil()`, que filtra por `auth.uid()`. E-mail e nome **nunca** saem
+  para outra pessoa — o que aparece em ranking, feedback e comentário é só o
+  nick.
+- **Quem é admin, quem pergunta é o banco.** A página de feedbacks chama
+  `sou_admin()` ao abrir, em vez de confiar no `admin` do perfil guardado no
+  navegador: virar admin é um `update` no banco, não uma ação do site, e o
+  espelho local pode estar velho. O selo "modo admin" no título existe para
+  isso ser visível — se ele não aparece, a conta não é admin, ponto.
+- **`amizades`, `conquistas` e `conquistas_do_jogador` seguem a mesma regra**
+  de `feedbacks`: sem política nem grant. `pedir_amizade()` confere
+  `auth.uid()` e recusa convidado (não há conta para receber o aviso); um
+  pedido de volta vira aceite, nunca uma segunda linha; recusar e desfazer
+  APAGAM a linha. O pedido e o aceite geram linha em `notificacoes`, e o
+  sininho os mostra. `conferir_conquistas(p_player_id)` recebe o id porque o
+  convidado não tem `auth.uid()` — o pior que alguém faz chamando com o id de
+  outra pessoa é dar a ela a conquista que os números dela já davam. Ela é
+  idempotente pela chave primária e lê só `runs` e `saves.collection`:
+  nenhum contador novo no motor.
+- **`feedbacks`, `feedback_comentarios` e `notificacoes` também não têm
+  política nem grant.** Tudo passa por função `security definer` que confere
+  `auth.uid()` por dentro: `criar_feedback` recusa quem não tem conta,
+  `editar_feedback`/`excluir_feedback` só aceitam o autor ou o admin, e
+  `admin_atualizar_feedback` só o admin. Quem decide é o banco, não a tela —
+  esconder o botão no React não é permissão.
+- **`eh_convidado()` é `security definer` porque as POLÍTICAS a chamam.** A
+  expressão de uma política roda com os privilégios de quem consulta, e o
+  `anon` não tem select em `players`: sem `security definer` a política
+  falharia com "permission denied for table players". Pelo mesmo motivo ela é
+  criada **antes** das políticas e fica **fora** do bloco de drop — derrubar
+  função de que uma política depende é erro.
+- **`runs` só aceita `insert` direto.** Toda leitura agregada ou por jogador
+  passa por função `security definer`, nunca por `select` cru:
+  - `estatisticas_gerais()` — agregados globais, usada por `/analytics`.
+  - `ranking()` — nick, avatar e vitórias/derrotas de todo mundo, usada por
+    `/ranking`. **Exceção deliberada:** esta função expõe o `nick` de todo
+    jogador publicamente. É intencional — o nick já não protegia nada (não é
+    senha, é só identificação) e virar uma lista pública é o que a rota
+    pede. **O avatar entrou na v0.14 por decisão explícita do autor** (ele já
+    era público pelo `perfil_publico()`). Não estenda esse padrão para expor
+    qualquer outra coluna.
+    **Convidado não entra no ranking** (`not p.convidado and not
+    r.convidado`, as duas marcas porque o perfil do convidado é apagável e a
+    run guarda a dela): o nick dele é sorteado e some quando ele sai, e o
+    placar se enchia de `convidado-xxxx`.
+  - `meus_jogos(p_player_id)` — runs de um jogador específico, usada por
+    `/meus-jogos`.
+  - `jogo_detalhe(p_run_id, p_player_id)` — uma run específica, checando que
+    pertence ao `p_player_id` informado (devolve vazio se não pertencer),
+    usada por `/meus-jogos/detalhe`.
+  - `jogo_publico(p_run_id)` — o replay de outra pessoa: o `details`, mais o
+    nick e o avatar do dono. **Nunca** o `player_id`, o nome ou o e-mail, e
+    não abre run largada (`abandono`) nem run não guardada. Pelo mesmo motivo
+    `jogos_do_jogador()` deixou de listar abandono para os outros.
+  Nenhuma delas dá `grant select` em `players` ou `runs` para `anon` — o
+  acesso continua só pela função.
+
+### O nick agora é só um nome
+
+Até a v0.3 entrar era digitar um nick, e quem digitasse o nick de outra pessoa
+jogava no save dela. **Isso acabou**: o nick virou apenas o nome público
+(ranking, feedbacks, comentários) e quem identifica é o Auth. A única entrada
+sem senha é o convidado, que por definição não tem nada a proteger.
+
+### Variáveis
+
+`NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`, em `.env.local`
+para desenvolvimento e como secrets do repositório para o deploy. Veja
+`.env.example`.
+
+A chave anon (= publishable) é **pública por natureza**: o build é estático,
+então ela vai embutida no JavaScript do site. Quem protege os dados é o RLS. A
+chave `service_role` (= secret) **nunca** pode entrar no projeto — ela ignora o
+RLS.
+
+Sem as variáveis o site continua de pé e avisa que o banco não está configurado.
+Mas sem conta (e sem convidado, que também precisa do banco) a guarda bloqueia
+`/jogar` e `/baralho`, e as cartas só moram no banco: **não dá para jogar
+localmente sem credencial**, e é decidido (v0.39).
+
+O login por e-mail e por Google se liga no painel do Supabase, não em variável
+nenhuma: o `.env.example` lista o que precisa estar configurado lá.
+
+---
+
+## Rodar e publicar
+
+```bash
+npm ci                # não apague o package-lock.json
+cp .env.example .env.local   # preencha antes de rodar
+npm run dev           # http://localhost:3000
+npm run build         # build normal, com checagem de tipos
+npm run build:pages   # gera out/ com basePath, igual ao CI
+```
+
+O deploy é `.github/workflows/pages.yml`, disparado a cada push no branch padrão
+ou à mão em Actions. Como é página de projeto, o site é servido em `/clt` e o
+build de deploy usa `basePath` — mas **só** quando `DEPLOY_TARGET=gh-pages`, para
+o `npm run dev` continuar na raiz.
+
+---
+
+## Balanceamento
+
+**O simulador está no repositório:** `npm run simular` (`scripts/simular.ts`).
+Ele roda o motor fora do navegador — que é o que o princípio de `src/game/` não
+importar React compra — com `Math.random` trocado por um LCG semeado, então a
+mesma semente dá exatamente a mesma partida. É isso que permite comparar duas
+versões do motor jogada por jogada: foi assim que a mudança de vocabulário da
+v0.12 foi conferida (300 runs, **zero diferenças**).
+
+**`--de arquivo.json` mede o jogo COMO ESTÁ NO AR** (v0.38): o Lab ›
+Simulador copia ou baixa um arquivo com as cartas e os eventos do banco, as
+regras do modo e o baralho equipado de quem exportou, e o simulador o
+carrega pelas mesmas portas do navegador (`carregarCatalogo`,
+`carregarModos`). **Desde a v0.39 o arquivo é obrigatório**: as cartas só
+moram no banco. Com `--inicial`, o baralho inicial no lugar do equipado; com
+`--tudo`, o inicial mais uma cópia de cada desbloqueável. Para comparar duas
+versões do motor (`--hash`), rode as duas com o mesmo arquivo — foi assim
+que a saída do `cards.ts` foi conferida (100 runs, `--inicial` e `--tudo`,
+idênticas antes e depois). O relatório mostra, por carta, a vitória nas runs em que ela foi
+jogada contra a geral (correlação, não causa), e por evento quantas runs
+acabaram mal no dia dele.
+
+Ele não existia antes: as medições eram feitas por um script escrito na conversa
+e jogado fora, e por isso envelheceram sem ninguém conseguir refazê-las.
+
+**Medição de 16/09/2026 — 1000 runs, bot mediano** (joga tarefa quando falta
+cota, descansa quando o estresse aperta, recua quando uma carta o levaria perto
+do teto):
+
+| | |
+|---|---|
+| vitória | **0,7%** |
+| burnout | **98,1%**, dia mediano **5** |
+| demissão | 1,2%, dia mediano 15 |
+| despejo | **0%** |
+| cota batida | 46% dos dias |
+| duração | 6,9 dias por run |
+
+**O jogo está duro demais, e o gargalo continua sendo o estresse.** A run
+mediana morre na primeira semana: como `Energia = 10 − Estresse`, cada dia sem
+bater a cota custa `+2` de estresse, que vira menos energia no dia seguinte, que
+faz perder a cota de novo. O `−3` do fim de semana quase nunca chega a tempo. O
+despejo **nunca** acontece: a conta de R$ 300 é irrelevante perto disso.
+
+**A troca da Reunião (v0.15)** — 1 Tarefa Simples a menos, 1 Reunião a mais,
+para o inicial ter 3 de cada naipe — custou um pouco: vitória 0,4%, burnout
+98,9%, cota batida 40,6%, 6,1 dias por run. Esperado: a Reunião rende menos
+produtividade que a Tarefa. É a regra de naipe pagando o preço, não o ajuste
+que o jogo precisa.
+
+**As cartas da v0.15** (baralho v3: 7 ajustes e 12 cartas novas, 5 delas
+pagas em R$). O bot paga R$ só se o saldo continuar cobrindo as contas da
+sexta. Medição de 1000 runs:
+
+| | baralho inicial | `--tudo` (inicial + 1 de cada desbloqueável) |
+|---|---|---|
+| vitória | 0% | 3,4% (pontuação mediana R$ 825) |
+| burnout | 99,9%, dia mediano 5 | 96,6%, dia mediano 5 |
+| cota batida | 42,2% dos dias | 49,8% dos dias |
+
+**O estresse como combustível (v0.18, baralho v4):** Canalizar a Raiva,
+Desabafo no Café e Grito no Travesseiro só saem com o estresse em 4, 6 e 8,
+e gastam o estresse ao jogar — restrição mais efeito, não um tipo de custo
+(um "custo" que baixa o estresse seria um custo que todo mundo quer pagar).
+São a primeira saída da espiral, e pesaram: com `--tudo`, 500 runs, a
+vitória foi de 4,7% para **19,4%** (burnout 80,2%, dia mediano 7). O
+baralho inicial não muda — elas vêm de envelope. Se a medição com o baralho
+de verdade dos jogadores passar da meta de 10–20%, a primeira a ajustar é a
+Canalizar a Raiva (1 de energia por −3 estresse e +4 produtividade é a
+carta mais eficiente do jogo).
+
+**As doze da v0.18** (Raiva, Virar a Noite, Respirar Fundo, Pedir Desculpas,
+Café Expresso, Terceirizar, Engolir Sapo, Reunião que Podia Ser E-mail,
+Faxina na Caixa de Entrada, Meditação no Banheiro, Plantão, Deixar pra
+Amanhã) são as primeiras pagas em estresse e em produtividade. Com elas o
+`--tudo` (agora 1 de cada uma de 40 desbloqueáveis) caiu de 19,4% para
+**7,8%** de vitória, burnout 92%: o baralho de "uma de cada" ficou diluído,
+e várias das novas sobem o estresse para render. Não é leitura de
+dificuldade do jogo, é de quão misturado esse baralho de teste ficou —
+medir com um baralho montado (25 cartas escolhidas) é o próximo passo.
+
+**Leitura:** as cartas mexem na margem, e não no problema. Com o baralho
+inicial a run continua morrendo na primeira semana — quem decide isso são as
+REGRAS (o `+2` de estresse por cota perdida, a cota da semana 1), e é por
+elas que o rebalanceamento tem que começar, no `/lab/regras`. As cartas
+pagas são jogadas pouco (0,2–0,3 por run) porque o bot quase nunca tem R$ 300
+de folga acima das contas: o dinheiro só sobra para quem chega à semana 2.
+
+Os números antigos do CLAUDE.md (309 burnouts em 500) eram anteriores ao Embalo
+e a um bot diferente — não compare os dois.
+
+---
+
+## Pendências abertas
+
+- **Animação de compra.** No protótipo as cartas voavam do baralho para a mão uma
+  a uma; isso não foi portado para o app.
+- **Sinergias entre cartas.** O Embalo cobre "ordem importa"; gatilhos nomeados
+  ("Café depois de Reunião não gera estresse") foram propostos e não feitos.
+- **Código morto:** `embaloAtual()` e `weekNumber()` em `engine.ts` não têm uso
+  fora do próprio arquivo.
+- **Rebalancear: o jogo está duro demais.** A medição de 1000 runs (veja
+  Balanceamento) dá 98% de burnout, quase sempre na primeira semana, e 0% de
+  despejo. As duas pontas a mexer são o custo do estresse (o `+2` por cota não
+  batida, e o `−3` do fim de semana) e a cota da semana 1. A infraestrutura toda
+  já existe: o retrato dentro da run, a versão do baralho, o histórico por carta, e
+  agora o `npm run simular` para medir antes de decidir. Falta decidir os
+  números — e dá para fazer pelo `/lab/regras` sem publicar o site.
+- **Rodar o `schema.sql` da v0.20** (`conquistas_da_run`, e as listas de
+  partidas devolvendo estresse, cartas jogadas e envelopes). Sem ele o
+  recibo resumido só deixa essas linhas de fora, e o replay, as
+  conquistas.
+- **Rodar o `schema.sql` da v0.17** (coluna `cartas.custos`). Sem ele o
+  custo em R$ segue funcionando pelo `custo_dinheiro`, mas custo de estresse
+  ou produtividade salvo no `/lab` não é gravado.
+- **O balanceamento do autor mora no banco (v0.33).** Um "Trazer do
+  código" já levou o `cards.ts` por cima dele; nada se perdeu (a versão
+  substituída fica em `cartas_antigas.dados`), e "Versões anteriores",
+  dentro da edição de cada carta no `/lab` (`_catalogo/Versoes.tsx`, lida
+  pela RPC `admin_versoes`), deixa ver e voltar a qualquer versão. O
+  histórico marca "do código" pelas frases que aquela caixa gravava
+  (`MOTIVOS_DO_CODIGO`, congelada no próprio arquivo). Desde a v0.39 o
+  código não tem mais cartas, e não há como isso se repetir.
+- **Rodar o `schema.sql` da v0.34** (as colunas novas de `conquistas` —
+  `oculta`, `tokens`, `grupo`, `nivel` —, as conquistas novas e
+  `colecao_de_amigo`). Sem ele as conquistas aparecem como antes, sem níveis
+  nem tokens, e a aba de baralhos do amigo não abre.
+- **As conquistas (v0.34):** algumas são OCULTAS (`minhas_conquistas` as
+  devolve sem nome nem descrição enquanto não são ganhas — quem esconde é o
+  banco), algumas sobem de NÍVEL (linhas com o mesmo `grupo`, `nivel` 1 a 3:
+  bronze, prata e ouro; o `colecionador` antigo virou o bronze do grupo
+  dele, e quem o tinha continua com ele), e todas pagam TOKENS. O saldo
+  mora na coleção, então quem paga é o site: `pagarConquistas` credita as
+  ganhas que não estão em `Collection.conquistasPagas` — na mesa, depois de
+  conferir, e no perfil, ao abrir a lista (é o que paga, de uma vez, quem
+  ganhou antes de valerem token). O componente `Conquistas` junta o grupo
+  numa entrada só, com os três metais.
+- **Rodar o `schema.sql` da v0.33** (`admin_versoes`). Sem ele as caixas
+  de versões do lab mostram o aviso de que a função falta.
+- **TODO id é UUID (v0.35).** Carta, evento, modo de jogo e conquista
+  tinham o NOME como id (`hora-extra`, `normal`, `mes-fechado`), e run,
+  relato, comentário, notificação e linha do histórico de carta tinham um
+  número sequencial. Os números viraram um uuid sorteado na migração (a run
+  usa o que o site já sorteava), com as chaves estrangeiras refeitas por
+  ele; e onde a ordem vinha do número, hoje vem da data (o histórico da
+  carta é `criada_em`, e `versao` dentro do mesmo dia). Nenhum deles mora
+  fora do banco, a não ser o link do replay, e o de número diz "essa
+  partida não existe". Os nomes viraram o uuid v5 do nome, como abaixo:
+  a conquista e o modo com um prefixo (`conquista:`, `modo:`; `idDaConquista`
+  e `idDoModo` em `ids.ts`), porque `conquistasPagas` e o `modo` de cada run
+  gravada continuam com o nome, e quem os traduz é a leitura (`lerColecao`,
+  `migrarRun`). No `schema.sql` o id das conquistas está escrito por
+  extenso, com o nome antigo num comentário ao lado. **E toda coluna de id
+  é do TIPO `uuid`**, as de catálogo inclusive: o fim do bloco dos modos
+  troca o tipo depois de os valores já serem uuid. Por isso as RPCs de admin
+  recebem o id como texto (`v_texto`), conferem o formato e só então o
+  convertem — o erro para quem manda o nome antigo é "o id da carta é um
+  uuid", e não um erro de conversão do Postgres. Nos blocos de migração,
+  toda comparação é `coluna::text !~ re`, porque eles rodam com a coluna
+  em `text` na primeira vez e em `uuid` nas seguintes. Só o `id_antigo` é
+  texto: ele guarda justamente o nome.
+- **O id da carta e do evento é UUID (v0.35), e o nome muda à vontade.**
+  Era o nome em hífens (`hora-extra`), o que não fazia sentido nenhum:
+  renomear a carta deixava o id contando o nome velho. Carta e evento novos
+  nascem com `crypto.randomUUID()`, e o lab mostra o id só para ler
+  (`IdInterno`). **O id antigo vira o uuid por uma CONTA, não por tabela:**
+  é o uuid v5 dele no espaço `ESPACO` (`src/game/ids.ts`), e o
+  `schema.sql` faz a mesma conta (`uuid_generate_v5`). Por isso nada além do
+  catálogo é reescrito no banco: o save, a coleção, o retrato e o
+  histórico de cada run gravada continuam falando `hora-extra`, e quem
+  traduz é a LEITURA, como sempre — `idAtual` nos campos que se sabe que
+  são id (`lerColecao`, `getCard`, `migrarAcao` no `ganharCarta`), e
+  `traduzirIds` no que não tem formato fixo (`migrarRun`, o `details` do
+  replay e das listas de partidas). **Desde a v0.47 o `schema.sql` reescreve
+  tudo no BANCO também** (saves, `runs.details`, `cartas_antigas.dados` e o
+  `ganharCarta` dentro dos efeitos): troca textual do id ENTRE ASPAS pelo
+  uuid, com o `id_antigo` como dicionário, e então derruba a coluna. A
+  tradução na leitura ficou como rede para o que mora no navegador de cada
+  um (o espelho do save, a fila de runs pendentes). `traduzirIds` só troca os ids antigos
+  CONHECIDOS (`IDS_ANTIGOS_DO_CODIGO` mais o `id_antigo` que o banco
+  devolve, que cobre as cartas criadas no lab antes disto): ele anda num
+  objeto qualquer, e trocar toda string que não é uuid trocaria texto.
+  **Nunca mude o `ESPACO`**, e não apague `idsAntigos.ts`: sem os dois, o
+  save de quem jogou antes perde as cartas. As estatísticas do banco
+  (`cartas_jogadas` e companhia) contam o id antigo e o novo separados, e
+  o site soma os dois (`juntarPorId` em `analytics.ts`). Conferido com o
+  simulador (300 runs, saída idêntica antes e depois), com um save, uma
+  run pela metade e um replay gravados pelo código de antes, e com o
+  `schema.sql` rodado duas vezes num Postgres com o catálogo antigo.
+- **Rodar o `schema.sql` da v0.35 antes de salvar qualquer carta no lab.**
+  Enquanto o catálogo do banco ainda tiver id antigo, o jogo funciona (a
+  leitura traduz), mas salvar criaria uma SEGUNDA carta com o uuid ao lado
+  da antiga (e o modo `normal` ganharia um irmão): por isso o lab mostra o
+  aviso vermelho e `escrever()` recusa tudo (`catalogoComIdsAntigos`).
+  **O site e o `schema.sql` da v0.35 precisam subir juntos:** o site novo
+  num banco velho não abre replay (o link é de número) nem grava run (o
+  `id` da run ainda é do banco), e o velho num banco novo também não grava
+  run (`run_id` não existe mais). A run que
+  falhar não se perde — entra na fila (`clt:runs-pendentes:v1`, que lê o
+  `run_id` de antes como `id`) e sobe na próxima abertura da mesa.
+- **Rodar o `schema.sql` da v0.47**: as funções de salvar e remover sem a
+  recusa do motivo vazio (sem ele, salvar em branco volta com "Diga por que
+  está mudando"), e a reescrita dos ids antigos (abaixo).
+- **Rodar o `schema.sql` da v0.40** (a tabela `presentes` e as três
+  funções). Sem ele, enviar presente no lab diz que a função falta, e o
+  início não mostra nada.
+- **Rodar o `schema.sql` da v0.38** (o pgcrypto, `email_para_entrar` e
+  `tentativas_de_entrada`). Sem ele, entrar pelo nick diz "ainda não está
+  ligado, use o e-mail"; o e-mail continua funcionando.
+- **Rodar o `schema.sql` da v0.14 em produção** e acrescentar `/auth/` nas
+  Redirect URLs do Supabase (veja a armadilha do Google). Até lá o site
+  funciona: amigos, conquistas e o replay alheio somem em silêncio
+  (`faltaFuncao()` em `jogadores.ts`) em vez de quebrar a página.
+
+- **Efeitos sonoros: os provisórios estão no ar (v0.37), faltam os
+  arquivos de verdade.** `src/data/efeitos.ts` toca pela Web Audio, com
+  cada som decodificado UMA vez na primeira interação e solto da memória
+  depois — `new Audio(arquivo).play()` foi o que deixou os sons atrasados
+  numa tentativa anterior, porque a tag de áudio baixa e decodifica na hora
+  de tocar. Medido no navegador: o som da carta começa 0,4 ms depois do
+  clique duplo. Cada linha de `SONS` é um `arquivo` (em
+  `public/som/efeitos/`) ou uma `sintese` (osciladores e ruído num
+  `OfflineAudioContext`), e hoje são todas síntese, porque daqui não dá
+  para baixar de banco de som: o autor tem Epidemic Sound, e trocar é
+  preencher o `arquivo` da linha (o que não carrega cai na síntese).
+  Tocam: carta jogada (no gesto, ANTES do `update`), salário, contas pagas,
+  sem dinheiro (despejo, e a máquina recusando), abrir recompensa e a carta
+  desvirando (com o brilho maior na épica e na lendária). O contexto é
+  separado do da música e dorme depois de 6 s parado, pela mesma razão do
+  mudo da música; todo `pointerdown`/tecla o acorda na captura, antes de o
+  som do gesto ser pedido. O volume é o terceiro controle (`efeitos` em
+  `som.ts`, que não baixa fora da mesa). Faltam, da tabela combinada:
+  comprar a mão, virar o evento, advertência, cota batida, burnout e
+  vitória, o recibo saindo, o token e a máquina vendendo.
+  **A vibração vai junto (v0.38, `src/data/vibrar.ts`)**: no Android,
+  `tocar()` chama `navigator.vibrate` com um ritmo por efeito (`RITMOS`), e
+  todo efeito novo já treme. Interruptor próprio (`Volumes.vibrar`), vale
+  com o mudo ligado, e só aparece em aparelho de toque (`pointer: coarse`:
+  o Chrome do computador TEM `navigator.vibrate` e não faz nada).
+  **No iPhone é outra coisa, medida no aparelho do autor:** o Safari não
+  tem `navigator.vibrate`, e o háptico do interruptor nativo (`<input
+  type="checkbox" switch>`, iOS 18+) NÃO dispara por `click()` de código
+  (no `<head>`, no `<body>`, no `pointerdown`, no `touchend` — nada). Ele só
+  treme quando o DEDO alterna o interruptor, mesmo invisível. Então lá a
+  vibração mora no ALVO do toque: `BotaoQueTreme` (um rótulo com o
+  interruptor transparente esticado por cima; a ação sai do `change`) nos
+  botões da sexta, no Comprar da máquina e no `Interruptor`; e a carta e o
+  palco da recompensa são `<label>` que só apontam (`for`) para um
+  interruptor fora da tela no toque que deve tremer (`apontarParaTremer`)
+  — o segundo do toque duplo, na carta. Interruptor por cima da carta não
+  serve: ela captura o ponteiro para o arraste, e o clique vai para ela. Um
+  `<button>` também não serve de casca: tocar num botão não ativa o rótulo
+  em volta. O que acontece sem toque (a carta desvirando) não treme lá.
+- **Cosméticos desbloqueáveis.** `conquistas.premio` já existe, nulo: é
+  onde o acessório que a conquista destrava (crachá, caneca, óculos da
+  firma) vai morar. Junto com os pontos de feedback, resolve a pendência "o
+  que se compra com os pontos".
+- **Espiral visível e o jogo duro de propósito.** Decidido: meta de 10–20% de
+  vitória para o bot mediano — e, por isso mesmo, junto com o que torna a
+  espiral LEGÍVEL: o `+2` de estresse por cota perdida virando regra de
+  `modos` (hoje está fixo em `engine.ts`), prévia de jogada rodando `playCard`
+  puro, "amanhã: X de energia", zonas de perigo no estresse, a cota como
+  barra, o veredito do dia e o fim do `−N` vermelho falso na virada da
+  produtividade. Duro e ilegível é injusto.
+- **Recompensa por feedback.** A nota que o admin dá já vira `players.pontos`
+  (nota × 10, recalculado a cada mudança) e aparece no perfil. Falta decidir o
+  que se compra com ela — carta, tema, nada disso.
+- **Notificação de verdade.** A tabela `notificacoes` já é preenchida a cada
+  resposta do admin, mudança de estado e comentário novo, e o sininho da barra
+  lateral já lê e marca como lida. Falta o aviso sair do site: e-mail, ou push.
+  Foi feito assim de propósito — quando isso chegar, o histórico já existe.
+- **O changelog é escrito à mão** (`src/data/changelog.ts`). Ao entregar coisa
+  nova, acrescente a versão no topo. **Só o que IMPORTA para quem joga
+  (v0.33, pedido do autor):** retrabalho de desenho (o chapéu que cresceu, a
+  orelha que subiu) não vira item, poucas linhas por versão, frases curtas —
+  lista comprida é ruído e ninguém lê. A lista "Fazendo agora" saiu. **Ele é
+  para quem JOGA (v0.23):** nada de banco, lab, editor de cartas ou forma de
+  guardar dado; o que foi desfeito depois sai da lista. Quando a cara de
+  alguma coisa muda, a versão leva `imagens` (antes e agora), em WebP em
+  `src/data/novidades/` e IMPORTADAS — `src` escrito à mão não ganha o
+  `/clt` do Pages. As fotos de antes saíram de builds de commits antigos:
+  `git worktree add` no commit, `node_modules` por link simbólico (as
+  dependências não mudaram desde o começo), build com o Supabase falso, e
+  o Playwright com a sessão de cada época no localStorage
+  (`clt:sessao:v1` até a v0.3, `clt:convidado:v1` depois) e o
+  `Math.random` semeado, para a mesa de antes e a de agora começarem com a
+  mesma sorte.
+- **Convidado é criável à vontade pelo `anon`.** `criar_convidado()` não tem
+  limite: dá para encher a tabela de perfis de convidado. Para um trabalho de
+  faculdade tudo bem; se virar problema, o caminho é rate limit no Supabase.
+- **O mp3 da trilha tem 3,7 MB.** Vai inteiro para o GitHub Pages em toda
+  visita (o navegador cacheia depois). Se a trilha crescer, vale reencodar
+  em bitrate menor ou cortar um loop curto.
+
+---
+
+## Convenções
+
+- **Português** em nomes, comentários e mensagens de commit. O código mais antigo
+  (`src/game/`) tem nomes em inglês por ter vindo do README; código novo é em
+  português. Não vale a pena renomear o antigo só por consistência.
+- **Comentário explica o porquê, não o quê.** Os comentários deste código
+  registram decisões e armadilhas — preserve-os ao refatorar.
+- **Verificação é pelo navegador — mas na medida da mudança.** Não há suíte de
+  testes, então o que valida é dirigir o app com Playwright. Só que subir
+  servidor + Supabase falso + navegador custa caro, e nem toda mudança paga
+  esse preço. A régua:
+  - **Dados ou marcação** (um link novo no menu, um texto, uma cor): só
+    `npx tsc --noEmit` e `npm run build`. Sem navegador.
+  - **Interação ou layout** (arraste, tamanho de carta, rolagem, celular):
+    meça no navegador. Todas as armadilhas da seção acima nasceram assim, e
+    nenhuma delas apareceria só lendo o código.
+  - **Fluxo novo inteiro** (uma rota nova, uma regra nova do motor): um
+    teste de ponta a ponta no fim, não um a cada passo.
+- **Cosmético novo se testa em TODOS os cortes, e nos três rostos.** O que
+  vai na cabeça encontra cada corte de um jeito: o chifre afundava no
+  flat-top, a orelha sumia nas pontas do espetado, o chapéu de bruxa
+  mostrava o canto do rosto quadrado. Alguns cortes pedem o item desenhado
+  de forma INDIVIDUAL (`FormaCabelo.alto` é o primeiro desses ajustes; o
+  que não couber num número vira um caso do próprio corte). O teste é uma
+  grade com todos os `CORTES` × os rostos, no tamanho da capa e com
+  `comCeu`, numa página temporária do `/lab` que não vai para o
+  repositório — e o item novo só entra depois dela.
+- **Mensagem de commit conta o porquê**, incluindo a causa raiz quando o commit
+  conserta um bug. O histórico é curto e vale ler.
+- **"Pergunta" ou "constatação" no começo da mensagem = não mexa em nada.** O
+  autor usa essas duas palavras para marcar conversa, não tarefa: absorva,
+  responda, e pare. Nada de editar arquivo, rodar build, subir navegador ou
+  commitar. No fim, diga o que faria e pergunte se pode.
