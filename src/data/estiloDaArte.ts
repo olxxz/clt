@@ -3,24 +3,24 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * O que a área de arte da carta mostra (v0.48): o ícone da classe, como
- * sempre foi, o RABISCO de caneta ou a COLAGEM de papelaria. É escolha de
- * quem joga, em Configurações › Aparência, e só muda o desenho: a carta é a
- * mesma nos três.
+ * O que a área de arte da carta mostra (v0.48): o RABISCO de caneta ou o
+ * ícone da classe, como sempre foi. É escolha de quem joga, em
+ * Configurações › Aparência, e só muda o desenho: a carta é a mesma.
+ * (A colagem de papelaria foi a terceira opção por meia hora e saiu a
+ * pedido do autor; quem a gravou cai no padrão, por `valido`.)
  *
  * As imagens moram em `src/data/artes/`, uma por carta e por estilo,
  * pelo id da carta. Carta sem imagem (criada no `/lab` depois) cai no ícone.
  */
-export type EstiloDaArte = 'icone' | 'rabisco' | 'colagem'
+export type EstiloDaArte = 'icone' | 'rabisco'
 
 export const ESTILOS_DA_ARTE: { valor: EstiloDaArte; rotulo: string }[] = [
-  { valor: 'colagem', rotulo: 'Colagem' },
   { valor: 'rabisco', rotulo: 'Rabisco' },
   { valor: 'icone', rotulo: 'Ícone' },
 ]
 
-/** A colagem é o padrão: foi o pedido de quem jogou, "imagem na carta". */
-export const ESTILO_PADRAO: EstiloDaArte = 'colagem'
+/** O rabisco é o padrão: foi o pedido de quem jogou, "imagem na carta". */
+export const ESTILO_PADRAO: EstiloDaArte = 'rabisco'
 
 // com HÍFEN, e não `clt:`: `limparLocalDoJogo` apaga o que começa com `clt:`
 // a cada saída e troca de conta, e isto é preferência do aparelho, não de
@@ -29,7 +29,7 @@ const CHAVE = 'clt-arte:v1'
 const EVENTO = 'clt:arte'
 
 function valido(v: unknown): v is EstiloDaArte {
-  return v === 'icone' || v === 'rabisco' || v === 'colagem'
+  return v === 'icone' || v === 'rabisco'
 }
 
 export function lerEstiloDaArte(): EstiloDaArte {

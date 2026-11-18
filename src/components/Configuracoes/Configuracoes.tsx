@@ -127,7 +127,7 @@ export default function Configuracoes({
 
           <h3 className={styles.titulo}>Arte das cartas</h3>
           {/* a prévia é a arte do Café em cada estilo: escolher vendo */}
-          <div className={styles.temas} role="radiogroup" aria-label="Arte das cartas">
+          <div className={`${styles.temas} ${styles.duas}`} role="radiogroup" aria-label="Arte das cartas">
             {ESTILOS_DA_ARTE.map((e) => (
               <button
                 key={e.valor}
@@ -472,10 +472,9 @@ function TrocarSenha() {
 /** O id do Café: a carta que todo mundo conhece, para a prévia da arte. */
 const CAFE = '49efebc8-f8b2-5495-ad28-472e360fc73b'
 
-function PreviaDaArte({ estilo }: { estilo: 'icone' | 'rabisco' | 'colagem' }) {
+function PreviaDaArte({ estilo }: { estilo: 'icone' | 'rabisco' }) {
   const imagem = estilo === 'icone' ? null : arteDaCarta(CAFE, estilo)
-  if (estilo === 'rabisco' && imagem)
+  if (imagem)
     return <span className={styles.previaRabisco} style={{ '--mascara': `url("${imagem}")` } as React.CSSProperties} />
-  if (imagem) return <img className={styles.previaColagem} src={imagem} alt="" />
   return <Coffee className={styles.previaIcone} />
 }

@@ -407,12 +407,10 @@ export default function Card({
           ) : null}
           {copies && copies > 1 ? <span className={styles.copias}>×{copies}</span> : null}
           <div className={`${styles.arte} ${imagem ? styles.comImagem : ''}`}>
-            {imagem && estiloDaArte === 'rabisco' ? (
+            {imagem ? (
               // o rabisco é só a FORMA (uma máscara): a cor é a da raridade,
               // ou a do tom no evento, e acompanha o tema
               <span className={styles.rabisco} style={{ '--mascara': `url("${imagem}")` } as CSSProperties} aria-hidden />
-            ) : imagem ? (
-              <img className={styles.colagem} src={imagem} alt="" draggable={false} decoding="async" />
             ) : (
               <Icon size={40} aria-hidden />
             )}

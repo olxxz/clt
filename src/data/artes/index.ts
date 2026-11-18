@@ -60,14 +60,6 @@ import rabisco56 from './rabisco/e93bd273-46b1-5fa5-94bc-c85c1b135573.webp'
 import rabisco57 from './rabisco/f0f3db8e-8f86-5c39-842f-2884b12dab52.webp'
 import rabisco58 from './rabisco/fd3c3df7-073a-5639-bf61-d033f8359634.webp'
 import rabisco59 from './rabisco/fe92514c-a55e-5017-9826-d5d8662d4423.webp'
-import colagem0 from './colagem/14197801-84be-5d44-a1e6-b154a280f46e.webp'
-import colagem1 from './colagem/25c1914f-66d7-5e71-986c-967bdf25c08e.webp'
-import colagem2 from './colagem/49efebc8-f8b2-5495-ad28-472e360fc73b.webp'
-import colagem3 from './colagem/94f7cd08-7416-5cca-a1f3-e8df57c40061.webp'
-import colagem4 from './colagem/9eec5854-d578-50c8-9681-9b44d0a5ebfa.webp'
-import colagem5 from './colagem/e4aa88ea-adb1-5063-af2a-5dbe64e73d29.webp'
-import colagem6 from './colagem/ee88ab97-f4dc-55bb-8662-1eff0373f34d.webp'
-import colagem7 from './colagem/fe92514c-a55e-5017-9826-d5d8662d4423.webp'
 
 const RABISCO: Record<string, StaticImageData> = {
   '022960ba-28d4-5955-9898-97f21898bb90': rabisco0,
@@ -132,20 +124,8 @@ const RABISCO: Record<string, StaticImageData> = {
   'fe92514c-a55e-5017-9826-d5d8662d4423': rabisco59,
 }
 
-const COLAGEM: Record<string, StaticImageData> = {
-  '14197801-84be-5d44-a1e6-b154a280f46e': colagem0,
-  '25c1914f-66d7-5e71-986c-967bdf25c08e': colagem1,
-  '49efebc8-f8b2-5495-ad28-472e360fc73b': colagem2,
-  '94f7cd08-7416-5cca-a1f3-e8df57c40061': colagem3,
-  '9eec5854-d578-50c8-9681-9b44d0a5ebfa': colagem4,
-  'e4aa88ea-adb1-5063-af2a-5dbe64e73d29': colagem5,
-  'ee88ab97-f4dc-55bb-8662-1eff0373f34d': colagem6,
-  'fe92514c-a55e-5017-9826-d5d8662d4423': colagem7,
-}
-
 /** A imagem da carta no estilo pedido, ou null (carta sem imagem: fica o
  *  ícone da classe). */
-export function arteDaCarta(id: string, estilo: 'rabisco' | 'colagem'): string | null {
-  const tabela = estilo === 'rabisco' ? RABISCO : COLAGEM
-  return tabela[id]?.src ?? null
+export function arteDaCarta(id: string, estilo: 'rabisco'): string | null {
+  return estilo === 'rabisco' ? (RABISCO[id]?.src ?? null) : null
 }

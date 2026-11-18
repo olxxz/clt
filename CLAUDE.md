@@ -379,13 +379,13 @@ Faça o mesmo antes de dar por boa qualquer refatoração do motor.
 
 ### A arte das cartas (v0.48)
 
-Foi o pedido do grupo que jogou: imagem na carta. Hoje a área de arte tem
-TRÊS estilos, escolhidos por quem joga em Configurações › Aparência
-(`src/data/estiloDaArte.ts`, `useEstiloDaArte`): **colagem** (o padrão),
-**rabisco** e **ícone** (o de sempre). A escolha mora em `clt-arte:v1`, com
-hífen de propósito: é do aparelho, e `limparLocalDoJogo` apaga o `clt:`.
+Foi o pedido do grupo que jogou: imagem na carta. A área de arte tem dois
+estilos, escolhidos por quem joga em Configurações › Aparência
+(`src/data/estiloDaArte.ts`, `useEstiloDaArte`): **rabisco** (o padrão) e
+**ícone** (o de sempre). A escolha mora em `clt-arte:v1`, com hífen de
+propósito: é do aparelho, e `limparLocalDoJogo` apaga o `clt:`.
 
-- **As imagens moram no CÓDIGO, pelo id da carta** (`src/data/artes/<estilo>/<uuid>.webp`,
+- **As imagens moram no CÓDIGO, pelo id da carta** (`src/data/artes/rabisco/<uuid>.webp`,
   importadas por `src/data/artes/index.ts`, GERADO por
   `node scripts/arte/indice.mjs`). É a exceção ao "cartas só no banco", e
   é de propósito: imagem é asset, não balanceamento, e importada ela ganha
@@ -395,30 +395,27 @@ hífen de propósito: é do aparelho, e `limparLocalDoJogo` apaga o `clt:`.
   com `cenas.py` dizendo a cena de cada carta pelo NOME e `catalogo.json`
   ligando nome e id). gpt-image-1.5, porque é o que gera com fundo
   transparente. As regras do prompt são do autor: nenhum objeto com rosto
-  (a caneca cansada foi recusada), pessoa só como silhueta ou boneco de
-  traço, sem texto (no tamanho da mesa ninguém lê), e na colagem POUCOS
-  elementos com o assunto central grande. O pós-processo recorta a margem
-  vazia, e a PNG crua fica em `scripts/arte/bruto/` (fora do git) para
-  refazer o recorte sem gastar (`--refazer`). O limite da conta é 20
-  imagens por minuto: o script espera e tenta de novo.
-- **O rabisco é MÁSCARA, não imagem**: o pós-processo joga fora a cor e
-  guarda só o alfa (com o traço engrossado, senão some em 130 px). No
-  `Card`, `.rabisco` pinta a máscara com `--cor-raridade`, `--cor-tom` no
-  evento e `--selo-comum` na comum, e por isso a cor acompanha a raridade
-  que estiver NO BANCO e o tema, sem gerar nada de novo.
+  (a caneca cansada foi recusada), pessoa só como boneco de traço, sem
+  texto (no tamanho da mesa ninguém lê). A PNG crua fica em
+  `scripts/arte/bruto/` (fora do git) para refazer o recorte sem gastar
+  (`--refazer`). O limite da conta é 20 imagens por minuto: o script espera
+  e tenta de novo, e para na hora quando falta crédito. **Custa dinheiro do
+  autor: diga quanto antes de gerar em lote.** Uma rodada sem aviso gastou
+  US$ 5.
+- **O rabisco é MÁSCARA, não imagem**: o pós-processo recorta a margem
+  vazia, joga fora a cor e guarda só o alfa (com o traço engrossado, senão
+  some em 130 px). No `Card`, `.rabisco` pinta a máscara com
+  `--cor-raridade`, `--cor-tom` no evento e `--selo-comum` na comum: a cor
+  acompanha a raridade que estiver NO BANCO e o tema, sem gerar nada de novo.
 - **Com imagem, a arte mora no papel da carta** (`.comImagem`): o fundo
-  mais escuro e o fio embaixo da área de arte faziam papel dentro de papel,
-  e o autor pediu para tirar. A imagem é `position: absolute` dentro da
-  `.arte`: como item da grade, a altura em % não tinha onde se apoiar e a
-  colagem cobria o nome da carta.
-- **Testado e recusado pelo autor: cenas com os avatares.** Um palco 5:4
-  maior que a área de arte, preso embaixo, com os avatares do editor
-  (quadrados, em % do palco) entre um SVG de fundo e um de frente; a carta
-  só corta o que sobra em cima, então chapéu não achata. Funcionou, e
-  ficou de fora: são só rabisco e colagem. Se voltar, é esse o caminho.
-- **Faltam imagens**: a conta da OpenAI ficou sem crédito no meio. Rodar
-  `python3 scripts/arte/gerar.py rabisco,colagem` e depois o `indice.mjs`
-  completa o que falta (o que existe é pulado).
+  mais escuro e o fio embaixo da área de arte faziam papel dentro de papel.
+- **Testados e recusados pelo autor:** a COLAGEM de papelaria gerada por
+  IA (chegou a ser opção, saiu) e cenas com os AVATARES do editor num palco
+  5:4 maior que a área de arte, preso embaixo, para o chapéu não achatar
+  (funcionou; se voltar, é esse o caminho).
+- **Faltam 14 eventos** (os 48 de ação estão prontos): rodar
+  `python3 scripts/arte/gerar.py rabisco` e depois o `indice.mjs`
+  completa (o que existe é pulado).
 
 ### O versionamento do baralho
 

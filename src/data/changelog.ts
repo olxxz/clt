@@ -65,7 +65,7 @@ export const VERSOES: Versao[] = [
     data: '2026-11-18',
     titulo: 'Cartas com imagem',
     itens: [
-      { tipo: 'novo', texto: 'As cartas ganharam imagem. Em Configurações › Aparência dá para escolher entre colagem, rabisco ou o ícone de antes.' },
+      { tipo: 'novo', texto: 'As cartas ganharam imagem. Em Configurações › Aparência dá para escolher entre o rabisco e o ícone de antes.' },
       { tipo: 'melhor', texto: 'No rabisco, a cor da caneta é a da raridade da carta, de cinza na comum a amarelo na lendária.' },
     ],
   },
