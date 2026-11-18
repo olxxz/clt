@@ -389,8 +389,8 @@ Faça o mesmo antes de dar por boa qualquer refatoração do motor.
 
 Foi o pedido do grupo que jogou: imagem na carta. A área de arte tem dois
 estilos, escolhidos por quem joga em Configurações › Aparência
-(`src/data/estiloDaArte.ts`, `useEstiloDaArte`): **rabisco** (o padrão) e
-**ícone** (o de sempre). A escolha mora em `clt-arte:v1`, com hífen de
+(`src/data/estiloDaArte.ts`, `useEstiloDaArte`): **ícone** (o padrão, só
+o do meio e na cor da raridade) e **rabisco** (a opção). A escolha mora em `clt-arte:v1`, com hífen de
 propósito: é do aparelho, e `limparLocalDoJogo` apaga o `clt:`.
 
 - **As imagens moram no CÓDIGO, pelo id da carta** (`src/data/artes/rabisco/<uuid>.webp`,

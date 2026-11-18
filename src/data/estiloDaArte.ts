@@ -3,8 +3,8 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * O que a área de arte da carta mostra (v0.48): o RABISCO de caneta ou o
- * ícone da classe, como sempre foi. É escolha de quem joga, em
+ * O que a área de arte da carta mostra (v0.48): o ícone do naipe na cor da
+ * raridade (o padrão) ou o RABISCO de caneta. É escolha de quem joga, em
  * Configurações › Aparência, e só muda o desenho: a carta é a mesma.
  * (A colagem de papelaria foi a terceira opção por meia hora e saiu a
  * pedido do autor; quem a gravou cai no padrão, por `valido`.)
@@ -15,12 +15,13 @@ import { useSyncExternalStore } from 'react'
 export type EstiloDaArte = 'icone' | 'rabisco'
 
 export const ESTILOS_DA_ARTE: { valor: EstiloDaArte; rotulo: string }[] = [
-  { valor: 'rabisco', rotulo: 'Rabisco' },
   { valor: 'icone', rotulo: 'Ícone' },
+  { valor: 'rabisco', rotulo: 'Rabisco' },
 ]
 
-/** O rabisco é o padrão: foi o pedido de quem jogou, "imagem na carta". */
-export const ESTILO_PADRAO: EstiloDaArte = 'rabisco'
+/** O ícone é o padrão, e o rabisco a opção (pedido do autor): é o "antes e
+ *  depois" da apresentação, trocado em Configurações. */
+export const ESTILO_PADRAO: EstiloDaArte = 'icone'
 
 // com HÍFEN, e não `clt:`: `limparLocalDoJogo` apaga o que começa com `clt:`
 // a cada saída e troca de conta, e isto é preferência do aparelho, não de

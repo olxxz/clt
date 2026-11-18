@@ -171,8 +171,10 @@ de um componente para outro, `../X`.
 
 ### Arte das cartas (v0.48, `src/data/estiloDaArte.ts`, `src/data/artes/`)
 
-Pedido do grupo que jogou. Em Configurações › Aparência: **rabisco** (o
-padrão) ou **ícone** (o de antes); a escolha mora em `clt-arte:v1`, com
+Pedido do grupo que jogou. Em Configurações › Aparência: **ícone** (o
+padrão: só o ícone do meio, na cor da raridade, sem o selo do canto) ou
+**rabisco** (com o selo do canto, sem fundo, na cor da raridade) — o padrão
+é o ícone para o autor mostrar o "antes e depois" na apresentação; a escolha mora em `clt-arte:v1`, com
 hífen, porque é do aparelho e `limparLocalDoJogo` apaga o `clt:`.
 - **A imagem mora no CÓDIGO, pelo id da carta** (`src/data/artes/rabisco/<uuid>.webp`),
   importada pelo índice GERADO (`node scripts/arte/indice.mjs`): é asset,

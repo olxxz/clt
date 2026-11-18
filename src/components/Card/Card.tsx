@@ -370,6 +370,9 @@ export default function Card({
             !evento && card.raridade && card.raridade !== 'comum'
               ? `${styles.comRaridade} ${styles[`raridade_${card.raridade}`]}`
               : '',
+            // sem imagem, o ícone do meio já diz o naipe: o do canto sai
+            // (menos na bloqueada, em que o canto é o cadeado)
+            !imagem && !locked ? styles.soIcone : '',
           ].join(' ')}
         >
           {custo !== null ? (
@@ -398,7 +401,7 @@ export default function Card({
             </span>
           ) : null}
           <span className={styles.selo} aria-label={locked ? 'bloqueada' : undefined} aria-hidden={!locked}>
-            {locked ? <LockIcon size={13} /> : <Icon size={13} />}
+            {locked ? <LockIcon size={18} /> : <Icon size={18} strokeWidth={2.25} />}
           </span>
           {seloExtra ?? rolar ? (
             <span className={styles.seloExtra}>

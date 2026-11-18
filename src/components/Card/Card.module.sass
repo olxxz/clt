@@ -167,6 +167,18 @@ $levantada: 18px
     width: 46%
     height: auto
 
+// sem imagem (o estilo "ícone", v0.48): o ícone do meio leva a cor da
+// raridade, e o do canto some, porque repetia o mesmo naipe
+.soIcone
+  .arte
+    color: var(--cor-raridade, var(--cor-tom, var(--selo-comum)))
+
+  .selo
+    display: none
+
+  .seloExtra
+    right: 4px
+
 // com imagem (v0.48), a arte mora no papel da própria carta: o fundo mais
 // escuro e o fio embaixo faziam um papel dentro do papel
 .comImagem
@@ -228,8 +240,8 @@ $levantada: 18px
   background: var(--produtividade)
 
 // ---------------------------------------------------------------- raridade
-// Por enquanto a raridade só pinta duas coisas: a BORDA da carta e o fundo do
-// selo do tipo. Comum não tem classe nenhuma — fica como sempre foi
+// A raridade pinta a BORDA da carta, o ícone do naipe e o rabisco da arte.
+// Comum não tem classe nenhuma: o ícone e o rabisco são o cinza do selo comum
 .raridade_incomum
   --cor-raridade: var(--raridade-incomum)
 
@@ -284,41 +296,36 @@ $levantada: 18px
   background: color-mix(in srgb, var(--papel-alto) 70%, transparent)
 
 .selo
-    background: var(--cor-raridade)
-    color: #fff
-
-.selo
   position: absolute
   top: 0
   right: 0
   z-index: 3
   display: grid
   place-items: center
-  // 2px a mais, que ficam embaixo da borda: o fundo do selo vai até a
-  // beirada da carta, e não sobra emenda entre ele e a borda
+  // só o ícone, sem a aba de fundo (v0.48, pedido do autor): maior, já que
+  // a aba não o limita mais, e na cor da raridade — a do tom no evento, o
+  // cinza do selo comum na carta comum
   box-sizing: border-box
-  width: 23px
-  height: 23px
-  padding: 2px 2px 0 0
-  background: color-mix(in srgb, var(--papel-baixo) 88%, var(--tinta))
-  border-bottom-left-radius: 7px
-  color: var(--tinta-fraca)
+  width: 27px
+  height: 27px
+  padding: 4px 4px 0 0
+  color: var(--cor-raridade, var(--cor-tom, var(--selo-comum)))
 
-// o segundo selo, à esquerda do da classe: o dado da carta de sorte
+// o segundo selo, à esquerda do da classe: o dado da carta de sorte. Sem
+// fundo, como o do naipe (v0.48)
 .seloExtra
   position: absolute
   top: 0
-  right: 23px
+  right: 25px
   z-index: 3
   display: grid
   place-items: center
   box-sizing: border-box
   width: 21px
-  height: 23px
-  padding-top: 2px
-  background: color-mix(in srgb, var(--papel-baixo) 88%, var(--tinta))
-  border-bottom-left-radius: 7px
-  color: var(--tinta-fraca)
+  height: 27px
+  padding-top: 4px
+  color: var(--cor-raridade, var(--cor-tom, var(--selo-comum)))
+  font-weight: 700
 
 .copias
   position: absolute
@@ -434,10 +441,6 @@ $levantada: 18px
 .evPositivo,
 .evAmbiguo
   --cor-borda: var(--cor-tom)
-
-  .selo
-    background: var(--cor-tom)
-    color: #fff
 
 .bloqueada
   .frente
